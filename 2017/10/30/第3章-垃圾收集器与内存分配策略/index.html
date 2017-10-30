@@ -1,0 +1,84 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="woaiwchch@126.com"><title>第3章 垃圾收集器与内存分配策略 | WChCh's Blog</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/7.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">第3章 垃圾收集器与内存分配策略</h1><a id="logo" href="/.">WChCh's Blog</a><p class="description">Coding My Life</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">第3章 垃圾收集器与内存分配策略</h1><div class="post-meta">Oct 30, 2017<span> | </span><span class="category"><a href="/categories/技术/">技术</a><a href="/categories/技术/学习/">学习</a><a href="/categories/技术/学习/JVM/">JVM</a></span></div><div class="post-content"><h4 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h4><ol>
+<li>每个栈中的栈帧随着方法的进入和退出而有条不紊地执行着出栈和入栈操作，每一个栈帧中分配多少内存基本上是在类结构确定下来是就已知的。</li>
+<li>程序计数器、虚拟机栈、本地方法栈这几个区域的内存分配和回收都具备确定性，不需要过多考虑回收的问题，因为方法结束或者线程结束时，内存自然就跟着回收了。而java堆和方法区则不一样。</li>
+</ol>
+<h4 id="对象已死吗"><a href="#对象已死吗" class="headerlink" title="对象已死吗"></a>对象已死吗</h4><h5 id="Java堆回收"><a href="#Java堆回收" class="headerlink" title="Java堆回收"></a>Java堆回收</h5><ol>
+<li>主流的java虚拟机里面没有选用引用计数器算法来管理内存，其中最主要的原因是它很难解决对象之间互相循环引用的问题。</li>
+<li>通过可达性分析算法来判定对象是否存活着，算法思路：通过一系列的称为“GC Roots”的对象作为起始点，从这些节点开始向下搜索，搜索所走过的路径称为引用链（Reference Chain），当一个对象到GC Roots没有任何引用链相连时，则证明此对象是不可用的。</li>
+<li>可作为GC Roots的对象包括下面几种:<ol>
+<li>虚拟机栈（栈帧中的本地变量表）中引用的对象。</li>
+<li>方法区中类静态属性引用的对象</li>
+<li>方法区中常量引用的对象</li>
+<li>本地方法栈中JNI引用的对象</li>
+</ol>
+</li>
+<li>java将引用分为强引用、软引用、弱引用、虚引用，引用强度逐渐减弱。</li>
+<li>可达性分析算法中不可达的对象，也并非是“非死不可”的，这时候它们暂时处于“缓刑”阶段，要真正宣告一个对象死亡，至少要经历两次标记过程。</li>
+<li>finalize()方法中对象逃脱死亡命运的最后一次机会。</li>
+<li>任何一个对象的finalize()方法都只会被系统自动调用一次，如果对象面临下一次回收，它的finalize()方法不会再次被执行。尽量避免使用它。</li>
+</ol>
+<a id="more"></a>
+<h5 id="方法区回收"><a href="#方法区回收" class="headerlink" title="方法区回收"></a>方法区回收</h5><ol>
+<li>Java虚拟机规范中确实说过可以不要求虚拟机在方法区(永久代)实现垃圾收集。</li>
+<li>永久代的垃圾回收主要回收两部分内容：废弃产量和无用的类。</li>
+<li>无用的类：<ol>
+<li>该类所有的实例都已经被回收，也就是Java堆中不存在该类的任何引用。</li>
+<li>加载该类的ClassLoader已经被回收。</li>
+<li>该类对用的java.lang.Class对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。</li>
+</ol>
+</li>
+</ol>
+<h5 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h5><ol>
+<li>什么是新生代、永久代、老年代</li>
+</ol>
+<h5 id="HotSpot的算法实现"><a href="#HotSpot的算法实现" class="headerlink" title="HotSpot的算法实现"></a>HotSpot的算法实现</h5><p>以下是介绍如何发起内存回收，还没回收：</p>
+<ol>
+<li>枚举根节点；</li>
+<li>安全点中断方式：抢先式中断、主动式中断，几乎没有虚拟机采用抢先式中断；</li>
+<li>安全区域：解决了“不执行的线程”无法到达安全点的问题。安全区域是指在一段代码片段之中，引用关系不会发生变化。</li>
+</ol>
+<h5 id="垃圾收集器（真正回收）"><a href="#垃圾收集器（真正回收）" class="headerlink" title="垃圾收集器（真正回收）"></a>垃圾收集器（真正回收）</h5><p>真正回收垃圾</p>
+<ol>
+<li>Serial收集器（新生代收集器，client模式下是很好的选择，单CPU下效果好）</li>
+<li>ParNew收集器：Serial多线程版本（Server模式下首选新生代收集器）</li>
+<li>Parallel Scavenge收集器（新生代）：吞吐量优先的收集器</li>
+<li>Serial Old收集器（老年代）</li>
+<li>CMS收集器（老年代）：以获取最短回收停顿时间为目标的收集器。步骤：<ol>
+<li>初始标志</li>
+<li>并发标志</li>
+<li>重新标志</li>
+<li>并发清除</li>
+</ol>
+</li>
+<li><p>G1收集器（新生代、老年代），优点：</p>
+<ol>
+<li>并行与并发</li>
+<li>分代收集（新生代、老年代）</li>
+<li>空间整合（整体：标记-整理实现，局部复制算法实现）</li>
+<li><p>可预测的停顿</p>
+<p>步骤：</p>
+</li>
+<li><p>初始标记</p>
+</li>
+<li>并发标记</li>
+<li>最终标记</li>
+<li>筛选回收</li>
+</ol>
+</li>
+</ol>
+<h5 id="理解GC日志"><a href="#理解GC日志" class="headerlink" title="理解GC日志"></a>理解GC日志</h5><p>阅读GC日志是处理Java虚拟机内存问题的基础技能。</p>
+<h4 id="内存分配与回收策略"><a href="#内存分配与回收策略" class="headerlink" title="内存分配与回收策略"></a>内存分配与回收策略</h4><p>给对象分配内存，对象主要分配在新生代的Eden区上，如果启动了本地线程分配缓冲，将按线程优先在TLAB上分配。</p>
+<p>几条最普遍的内存分配规则</p>
+<ol>
+<li>对象优先在Eden分配，-Xmn10M表示10M分配给了新生代；-XX:SurvivorRatio=8决定了新生代中Eden区与一个Survivor区的空间比例是8:1.</li>
+<li>Minor GC和Full GC有什么不一样吗？</li>
+</ol>
+<h4 id="大对象直接进入老年代"><a href="#大对象直接进入老年代" class="headerlink" title="大对象直接进入老年代"></a>大对象直接进入老年代</h4><p>最典型的大对象就是那种很长的字符串以及数组。虚拟机提供了一个-XX:PretenureSizeThreshold参数，令大于这个设置值的对象直接在老年代分配。</p>
+<h4 id="长期存活的对象将进入老年代"><a href="#长期存活的对象将进入老年代" class="headerlink" title="长期存活的对象将进入老年代"></a>长期存活的对象将进入老年代</h4><ol>
+<li>对象晋升老年代的年龄阈值，可以通过参数：-XX:MaxTenuringThreshold设置。</li>
+<li>1 对象优先在Eden中分配，当Eden中没有足够的空间分配时会促发一次Minor GC。每次Minor GC结束后，Eden区会清空，因为它会把Eden中还依然存活的对象放到Survivor中，当Survivor中放不下时，则由分派担保进入老年代中。2 大对象直接进入老年代中。-XX:+PretenuerSizeThreshold 控制”大对象的“的大小。即当创建的对象大于这个临界值时，则该对象直接进入老年代。3 长期存活的对象将进入老年代。虚拟机对每个对象定义了一个对象年龄（Age）计数器。当年龄增加到一定的临界值时，就会晋升到老年代中，该临界值由参数：-XX:MaxTenuringThreshold来设置。如果对象在Eden出生并在第一次发生Minor GC时仍然存活，并且能够被Survivor中所容纳的话，则该对象会被移动到Survivor中，并且设Age=1；以后每经历一次Minor GC，该对象还存活的话会被移动到另一个Survivor区中，并且Age=Age+1。4 动态对象年龄判定：如上所示，虚拟机并不总是要求对象的年龄必须达到MaxTenuringThreshold才能晋升到老年代，如果在Survivor区中相同年龄（设年龄为age）的对象的所有大小之和超过Survivor空间的一半，年龄大于或等于该年龄（age）的对象就可以直接进入老年代，无需等到MaxTenuringThreshold中要求的年龄。</li>
+</ol>
+<h4 id="动态对象年龄判定"><a href="#动态对象年龄判定" class="headerlink" title="动态对象年龄判定"></a>动态对象年龄判定</h4><p>如果在Survivor空间中相同年龄所有对象大小的总和大于Survivor空间的一半，年龄大于或等于该年龄的对象就可以直接进入老年代，无须等到MaxTenuringThreshold中要求的年龄。</p>
+<h4 id="空间分配担保"><a href="#空间分配担保" class="headerlink" title="空间分配担保"></a>空间分配担保</h4><p>每一次回收晋升到老年代对象容量的平均大小值最为经验值，与老年代的剩余空间进行比较，决定是否进行Full GC来让老年代腾出更多的空间。老年代空间不足会出现担保失败。</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>内存回收与垃圾收集器在很多时候都是影响系统性能、并发能力的主要因素之一，虚拟机之所以提供多种不同的收集器以及提供大量的调节参数，是因为只有根据实际应用需求、实现方式选择最优的收集方式才能获取最高的性能。</p>
+</div><div class="tags"><a href="/tags/Java/">Java</a><a href="/tags/虚拟机/">虚拟机</a><a href="/tags/JVM/">JVM</a><a href="/tags/深入理解Java虚拟机读书笔记/">深入理解Java虚拟机读书笔记</a></div><div class="post-nav"><a href="/2017/10/30/第2章-Java内存区域与内存溢出异常/" class="next">第2章 Java内存区域与内存溢出异常</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank" class="search-form"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://yoursite.com"/></form></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/学习/">学习</a><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/学习/JVM/">JVM</a></li></ul></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Java/" style="font-size: 15px;">Java</a> <a href="/tags/虚拟机/" style="font-size: 15px;">虚拟机</a> <a href="/tags/JVM/" style="font-size: 15px;">JVM</a> <a href="/tags/深入理解Java虚拟机读书笔记/" style="font-size: 15px;">深入理解Java虚拟机读书笔记</a> <a href="/tags/感想/" style="font-size: 15px;">感想</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第3章-垃圾收集器与内存分配策略/">第3章 垃圾收集器与内存分配策略</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第2章-Java内存区域与内存溢出异常/">第2章 Java内存区域与内存溢出异常</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第1章-走进Java/">第1章 走进Java</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/我的第一篇博客/">我的第一篇博客</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="https://shalk.github.io/" title="shalk" target="_blank">shalk</a><ul></ul><a href="http://luckylau.tech/" title="luckylau" target="_blank">luckylau</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2017 <a href="/." rel="nofollow">WChCh's Blog.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.1.20/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.1.20/jquery.fancybox.min.css"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>
