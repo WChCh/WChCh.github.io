@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="woaiwchch@126.com"><title>第7章 虚拟机类加载机制 | WChCh's Blog</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/7.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">第7章 虚拟机类加载机制</h1><a id="logo" href="/.">WChCh's Blog</a><p class="description">Coding My Life</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">第7章 虚拟机类加载机制</h1><div class="post-meta">Oct 30, 2017<span> | </span><span class="category"><a href="/categories/技术/">技术</a><a href="/categories/技术/学习/">学习</a><a href="/categories/技术/学习/JVM/">JVM</a></span></div><div class="post-content"><p>虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。</p>
+<p>在Java语言里，类型的加载、连接和初始化都是在程序运行期间完成的。</p>
+<h4 id="类加载的时机"><a href="#类加载的时机" class="headerlink" title="类加载的时机"></a>类加载的时机</h4><p>类从被加载到虚拟机内存中开始，到卸载出内存为止，它的整个生命周期包括：加载、验证、准备、解析、初始化、使用和卸载。其中验证、准备、解析3个部分统称为连接。</p>
+<p>解析阶段不一定：它在某些情况下可以在初始化阶段之后再开始，这个是为了支持Java语言的运行时绑定（也称动态绑定或晚期绑定）。</p>
+<p>对于初始化阶段，虚拟机规范则是严格规定了有且只有5中情况必须立即对类进行“初始化”（而加载、验证、准备自然需要在此之前开始）：</p>
+<ol>
+<li>遇到new、getstatic、putstatic或invokestatic这4条字节指令时，如果类没有进行过初始化，则需要先触发其初始化。</li>
+<li>使用java。lang.reflect包的方法对类进行反射调用的时候，如果类没有进行过初始化，则需要先触发其初始化。</li>
+<li>当初始化一个类的时候，如果发现其父类还没有进行过初始化，则需要先触发其父类的初始化。</li>
+<li>当虚拟机启动时，用户需要制定一个要执行的主类，虚拟机会先初始化这个主类。</li>
+<li>5 当使用JDK1.7动态语言支持是，…….</li>
+</ol>
+<p>这5中场景中的行为成为对一个类进行主动引用，除此之外，所有引用类的方式都不会触发初始化，成为被动引用。</p>
+<h4 id="类加载过程"><a href="#类加载过程" class="headerlink" title="类加载过程"></a>类加载过程</h4><p>类加载的全过程，也就是加载、验证、准备、解析和初始化这个5个阶段。</p>
+<h5 id="1-加载"><a href="#1-加载" class="headerlink" title="1 加载"></a>1 加载</h5><p>在加载阶段，虚拟机需要完成一下3件事情：</p>
+<ol>
+<li>通过一个类的全限定名来获取定义此类的二进制字节流。</li>
+<li>将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构。</li>
+<li>在内存中生成一个代表这个类的java.lang.Class对象，作为方法区这个类的各种数据的访问入口，对于HotSpot虚拟机而言，Class对象比较特殊，它虽然是对象，但是存放在方法区里面。</li>
+</ol>
+<a id="more"></a>
+<p>数组类本身不通过类加载器创建，它是由Java虚拟机直接创建的。</p>
+<h5 id="2-验证"><a href="#2-验证" class="headerlink" title="2 验证"></a>2 验证</h5><p>验证是连接阶段的第一步，目的是为了确保Class文件的字节流中包含的信息符合当前虚拟机的要求，并且不会危害虚拟机自身的安全。</p>
+<p>验证阶段的4个检验动作：</p>
+<ol>
+<li>文件格式验证：通过这个阶段的验证后，字节流才会进入内存的方法区中进行存储，所以后面的3个验证阶段全部都是基于方法区的存储结构进行的，不会再直接操作字节流。</li>
+<li>元数据验证</li>
+<li>字节码验证：确定程序语义是合法的、符合逻辑的。</li>
+<li>符号引用验证</li>
+</ol>
+<h5 id="3-准备"><a href="#3-准备" class="headerlink" title="3 准备"></a>3 准备</h5><p>准备阶段是正式为类变量分配内存并设置类变量初始值的阶段，这些变量所使用的内存都将在方法区中进行分配。</p>
+<p><em>注意</em>：首先，这时候进行内存分配的仅包括类变量（被static修饰的变量），而不包括实例变量，实例变量将会在对象实例化时随着对象一起分配在Java堆中。其次，这里所说的初始值“通常情况”下是数据类型的零值。java程序的初始值赋值动作在初始化阶段才会执行。</p>
+<p><em>特殊情况</em>：如果类字段的字段属性表存在ConstantValue属性，那在准备阶段变量value就会被初始化为ConstantValue属性所指定的值，假设上面类变量value的定义为：</p>
+<p><code>public static final int value = 123</code></p>
+<p>编译时javac将会为value生成ConstantValue属性，在准备阶段虚拟机就会根据ConstantValue的设置将value赋值为123。因为关键字不但有<code>static</code>，还有<code>final</code>。</p>
+<h5 id="4-解析"><a href="#4-解析" class="headerlink" title="4 解析"></a>4 解析</h5><p>解析阶段是虚拟机将常量池内的符号引用替换为直接引用的过程。解析动作主要针对类或者接口、字段、类方法、接口方法、方法类型、方法句柄和调用点限定符7类符号引用进行，分别对应于常量池的……..。</p>
+<h5 id="5-初始化"><a href="#5-初始化" class="headerlink" title="5 初始化"></a>5 初始化</h5><p>类初始化阶段是类加载过程的最后一步。到了初始化阶段，才真正开始执行类中定义的Java程序代码（或者说字节码），是执行类构造器<clinit>()方法的过程。</clinit></p>
+<ol>
+<li>父类中定义的静态语句块要优先于子类的变量赋值操作。</li>
+</ol>
+<h4 id="类与类加载器"><a href="#类与类加载器" class="headerlink" title="类与类加载器"></a>类与类加载器</h4><h4 id="双亲委派模型"><a href="#双亲委派模型" class="headerlink" title="双亲委派模型"></a>双亲委派模型</h4><p>从Java虚拟机的角度将，只存在两种不同类型的类加载器：一种是启动类加载器，是虚拟机自身的一部分；另一种就是所有其他的类加载器。独立于虚拟机外部，并且全都继承自抽象类java.lang.ClassLoader。</p>
+<p>3种类型的类加载器：</p>
+<ol>
+<li>启动类加载器：加载<java_home>\lib目录中的并且是虚拟机识别的类库加载到虚拟机内存中。改加载器无法被Java程序直接引用。</java_home></li>
+<li>扩展类加载器：加载<java_home>\lib\ext目录中的类库。开发者可以直接使用。</java_home></li>
+<li>应用程序类加载器：负责加载用户类路径（ClassPath）上所指定的类库。</li>
+</ol>
+<p>如果有必要，还可以加入自己定义的类加载器。</p>
+<p><strong>这里类加载器之间的父子关系一般不会以继承的关系来实现，而是都使用组合关系来复用父类加载器的代码。</strong></p>
+<p>双亲委派模型的工作过程：……..。</p>
+<h4 id="破坏双亲委派模型"><a href="#破坏双亲委派模型" class="headerlink" title="破坏双亲委派模型"></a>破坏双亲委派模型</h4></div><div class="tags"><a href="/tags/Java/">Java</a><a href="/tags/虚拟机/">虚拟机</a><a href="/tags/JVM/">JVM</a><a href="/tags/深入理解Java虚拟机读书笔记/">深入理解Java虚拟机读书笔记</a></div><div class="post-nav"><a href="/2017/10/30/第8章-虚拟机字节码执行引擎/" class="pre">第8章 虚拟机字节码执行引擎</a><a href="/2017/10/30/第6章-类文件结构/" class="next">第6章 类文件结构</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank" class="search-form"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://yoursite.com"/></form></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/学习/">学习</a><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/学习/JVM/">JVM</a></li></ul></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Java/" style="font-size: 15px;">Java</a> <a href="/tags/虚拟机/" style="font-size: 15px;">虚拟机</a> <a href="/tags/JVM/" style="font-size: 15px;">JVM</a> <a href="/tags/深入理解Java虚拟机读书笔记/" style="font-size: 15px;">深入理解Java虚拟机读书笔记</a> <a href="/tags/感想/" style="font-size: 15px;">感想</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第8章-虚拟机字节码执行引擎/">第8章 虚拟机字节码执行引擎</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第7章-虚拟机类加载机制/">第7章 虚拟机类加载机制</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第6章-类文件结构/">第6章 类文件结构</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第5章-调优案例分析与实战/">第5章 调优案例分析与实战</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第4章-虚拟机性能监控与故障处理工具/">第4章 虚拟机性能监控与故障处理工具</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第3章-垃圾收集器与内存分配策略/">第3章 垃圾收集器与内存分配策略</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第2章-Java内存区域与内存溢出异常/">第2章 Java内存区域与内存溢出异常</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第1章-走进Java/">第1章 走进Java</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/我的第一篇博客/">我的第一篇博客</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="https://shalk.github.io/" title="shalk" target="_blank">shalk</a><ul></ul><a href="http://luckylau.tech/" title="luckylau" target="_blank">luckylau</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2017 <a href="/." rel="nofollow">WChCh's Blog.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.1.20/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.1.20/jquery.fancybox.min.css"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>

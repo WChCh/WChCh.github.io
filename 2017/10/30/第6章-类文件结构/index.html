@@ -1,0 +1,65 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="woaiwchch@126.com"><title>第6章 类文件结构 | WChCh's Blog</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/7.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">第6章 类文件结构</h1><a id="logo" href="/.">WChCh's Blog</a><p class="description">Coding My Life</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">第6章 类文件结构</h1><div class="post-meta">Oct 30, 2017<span> | </span><span class="category"><a href="/categories/技术/">技术</a><a href="/categories/技术/学习/">学习</a><a href="/categories/技术/学习/JVM/">JVM</a></span></div><div class="post-content"><h4 id="无关性的基石"><a href="#无关性的基石" class="headerlink" title="无关性的基石"></a>无关性的基石</h4><p>各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。<br>无关性：</p>
+<ol>
+<li>平台无关性</li>
+<li>语言无关性<br>实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。</li>
+</ol>
+<h4 id="Class类文件的结构"><a href="#Class类文件的结构" class="headerlink" title="Class类文件的结构"></a>Class类文件的结构</h4><ol>
+<li>任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来说，类或接口并不一定都得定义在文件里。</li>
+<li>Class文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑第排列在Class文件中，中间没有任何分隔符。当遇到需要占用8位字节以上空间的数据项时，则会按照高位在前的方式分割成若干个8位字节进行存储（大端模式）。</li>
+<li>Class文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构中只有两种数据类型：无符号数和表。</li>
+<li>无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8编码构成字符串。</li>
+<li>表是由多个无符号数或者其他表作为数据项构成的复合数据类型，所有表都习惯性地以“_info”结尾。整个Class文件本质上就是一张表。</li>
+</ol>
+<h5 id="魔数与Class文件的版本"><a href="#魔数与Class文件的版本" class="headerlink" title="魔数与Class文件的版本"></a>魔数与Class文件的版本</h5><ol>
+<li>每个Class文件的头4个字节称为魔数，唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件，使用魔数不是扩展名来进行识别主要是基于安全方面的考虑，值为：0xCAFEBABE。</li>
+<li>紧接着魔数的4个字节存储的是Class文件的版本号：第5和第6个字节是次版本号，第7和第8个字节是主版本号。</li>
+</ol>
+<h5 id="常量池"><a href="#常量池" class="headerlink" title="常量池"></a>常量池</h5><p>紧接着主次版本号之后的是常量池入口，常量池可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，也是占用Class文件空间最大的数据项目之一，同时他还是在Class文件中第一个出现的表类型数据项目。</p>
+<p>常量池容量计数器是从1开始计数的，表示常量的个数。<br>常量翅中主要存放两大类常量：</p>
+<ol>
+<li>字面量</li>
+<li>符号引用</li>
+</ol>
+<a id="more"></a>
+<p>字面量比较接近于Java语言层面的常量概念，如字符串、声明为final的常量值等。而符号引用则属于编译原理方面的概念，包括了下面的三类常量：</p>
+<ol>
+<li>类和接口的全限定名</li>
+<li>字段的名称和描述符</li>
+<li>方法的名称和描述符<br>常量池中每一个常量都是一个表。</li>
+<li>常量池容量为21，表示有21项常量</li>
+</ol>
+<p><strong>由于Class文件中方法、字段等都需要引用CONSTANT_Utf8_info型常量来描述名称，所以CONSTANT_Utf8_info型常量的最大长度也就是Java中方法、字段名的最大长度。而这里的最大长度就是length的最大值，既u2类型能表达的最大值65535.所以Java程序中如果定义了超过65KB因为字符串的变量或方法名将会无法编译。</strong></p>
+<p>javap工具用于分析Class文件字节码的。</p>
+<h5 id="访问标志"><a href="#访问标志" class="headerlink" title="访问标志"></a>访问标志</h5><p>这个标志用于识别一些类或者是接口层次的访问信息。</p>
+<h5 id="类索引、父类索引与接口索引集合"><a href="#类索引、父类索引与接口索引集合" class="headerlink" title="类索引、父类索引与接口索引集合"></a>类索引、父类索引与接口索引集合</h5><p>Class文件中由这三项数据来确定这个类的继承关系。</p>
+<h5 id="字段表集合"><a href="#字段表集合" class="headerlink" title="字段表集合"></a>字段表集合</h5><p>字段表用于描述接口库或者类中声明的变量。</p>
+<p>字段包括类级变量以及实例级变量，但不包括在方法内部声明的局部变量。</p>
+<p>字段表集合中不会列出从超类或者父类接口中继承而来的字段，但有可能列出原本Java代码中不存在的字段。对于字节码来说，如果两个字段的描述符不一致，那字段重名就是合法的。</p>
+<h5 id="方发表集合"><a href="#方发表集合" class="headerlink" title="方发表集合"></a>方发表集合</h5><p>volatile关键字和transient关键字不能修饰方法，所以方发表的访问标志中没有了ACC_VOLATITE标志和ACC_TRANSIENT标志。</p>
+<h5 id="属性表集合"><a href="#属性表集合" class="headerlink" title="属性表集合"></a>属性表集合</h5><p>在Class文件、字段表、方发表都可以携带自己的属性表集合，以用于描述某些场景专有的信息。<br>操作栈数？<br>max_stack代表了操作数栈深度的最大值。在方法执行的任意时刻，操作栈数都不会超过这个深度。虚拟机运行的时候需要根据这个值来分配栈帧中的操作栈深度。</p>
+<h6 id="1-Code属性"><a href="#1-Code属性" class="headerlink" title="1 Code属性"></a>1 Code属性</h6><p>了解Code属性是学习后面关于字节码执行引擎内容的必要基础，能直接阅读字节码也是工作中分析Java代码语义问题的必要工具和基本技能。 </p>
+<p>使用Javap 命令计算字节码指令： javap -verbose TestClass</p>
+<p>在实例方法的局部变量表中至少会存在一个指向当前对象实例的局部变量，局部变量表中也会预留第一个Slot位来存放对象实例的引用，方法参数值从1开始计算。，这个处理只对实例方法有效。</p>
+<h6 id="2-Exceptions属性"><a href="#2-Exceptions属性" class="headerlink" title="2 Exceptions属性"></a>2 Exceptions属性</h6><p>Exceptions属性的作用是列举出方法中可能抛出的受检查异常(Checked Exceptions)，也就是方法描述时在throws关键字后面列举的异常。</p>
+<h6 id="3-LineNumberTable属性"><a href="#3-LineNumberTable属性" class="headerlink" title="3 LineNumberTable属性"></a>3 LineNumberTable属性</h6><p>LineNumberTable属性用于描述Java源码行号与字节码行号之间的对应关系。 </p>
+<h6 id="4-LocalVariableTable属性"><a href="#4-LocalVariableTable属性" class="headerlink" title="4 LocalVariableTable属性"></a>4 LocalVariableTable属性</h6><p>LocalVariableTable属性用于描述栈帧中局部变量表中的变量与Java源码中定义的变量之间的关系</p>
+<h6 id="5-SourceFile属性"><a href="#5-SourceFile属性" class="headerlink" title="5 SourceFile属性"></a>5 SourceFile属性</h6><p>SourceFile属性用于记录生成这个Class文件的源码文件名称。</p>
+<h6 id="6-ConstantValue属性"><a href="#6-ConstantValue属性" class="headerlink" title="6 ConstantValue属性"></a>6 ConstantValue属性</h6><p>ConstantValue属性的作用是通知虚拟机自动为静态变量赋值。onstantValue的属性值只能限于基本类型和String。</p>
+<h6 id="7-InnerClasses属性"><a href="#7-InnerClasses属性" class="headerlink" title="7 InnerClasses属性"></a>7 InnerClasses属性</h6><p>InnerClasses属性用于记录内部类与宿主类之间的关联。</p>
+<h6 id="8-Deprecated及Synthetic属性"><a href="#8-Deprecated及Synthetic属性" class="headerlink" title="8 Deprecated及Synthetic属性"></a>8 Deprecated及Synthetic属性</h6><h6 id="9-StackMapTable属性"><a href="#9-StackMapTable属性" class="headerlink" title="9 StackMapTable属性"></a>9 StackMapTable属性</h6><h6 id="10-Signature"><a href="#10-Signature" class="headerlink" title="10 Signature"></a>10 Signature</h6><h6 id="11-BootstrapMethods属性"><a href="#11-BootstrapMethods属性" class="headerlink" title="11 BootstrapMethods属性"></a>11 BootstrapMethods属性</h6><h5 id="字节码指令简介"><a href="#字节码指令简介" class="headerlink" title="字节码指令简介"></a>字节码指令简介</h5><p>Java虚拟机的指令由一个字节长度、代表着某种特定操作含义的数字（称为操作码，Opcode）以及跟随其后的零至多个代表此操作所需参数（称为操作数，Operands）而构成。</p>
+<h6 id="1-字节码与数据结构"><a href="#1-字节码与数据结构" class="headerlink" title="1 字节码与数据结构"></a>1 字节码与数据结构</h6><p>阅读字节码作为了解Java虚拟机的基础技能，是一项应当熟练掌握的能力。</p>
+<h6 id="2-加载和存储指令"><a href="#2-加载和存储指令" class="headerlink" title="2 加载和存储指令"></a>2 加载和存储指令</h6><p>加载和存储指令用于将数据在栈帧中的局部变量表和操作数栈之间来回传输。</p>
+<h6 id="3-运算指令"><a href="#3-运算指令" class="headerlink" title="3 运算指令"></a>3 运算指令</h6><p>运算指令用于对两个操作数栈上的值进行某种特定运算，并把结果重新存入到操作栈顶。</p>
+<p>算术指令分为两种：</p>
+<ol>
+<li>对整型数据进行运算的指令。</li>
+<li>对浮点型数据进行运算的指令。</li>
+</ol>
+<p>无论哪种算术指令，都使用Java虚拟机的数据类型，由于没有直接支持byte，short，char和boolean类型的算术指令，对于这类数据的运算，应使用操作int类型的指令代替。</p>
+<h6 id="4-类型转换指令"><a href="#4-类型转换指令" class="headerlink" title="4 类型转换指令"></a>4 类型转换指令</h6><h6 id="5-对象创建与访问指令"><a href="#5-对象创建与访问指令" class="headerlink" title="5 对象创建与访问指令"></a>5 对象创建与访问指令</h6><h6 id="6-操作数栈管理指令"><a href="#6-操作数栈管理指令" class="headerlink" title="6 操作数栈管理指令"></a>6 操作数栈管理指令</h6><p>操作数栈的指令：</p>
+<ol>
+<li>将操作数栈的栈顶一个或两个元素出栈：pop、pop2。</li>
+<li>复制栈顶一个或两个数值并将复制值或双份的复制值重新压入栈顶：dup、dup2、dup_x1、dup_x2、dup2_x2。</li>
+<li>将栈最顶端的两个数值互换：swap。</li>
+</ol>
+<h6 id="7-控制转移指令"><a href="#7-控制转移指令" class="headerlink" title="7 控制转移指令"></a>7 控制转移指令</h6><h6 id="8-方法调用和返回指令"><a href="#8-方法调用和返回指令" class="headerlink" title="8 方法调用和返回指令"></a>8 方法调用和返回指令</h6><h6 id="9-异常处理指令"><a href="#9-异常处理指令" class="headerlink" title="9 异常处理指令"></a>9 异常处理指令</h6><h6 id="10-同步指令"><a href="#10-同步指令" class="headerlink" title="10 同步指令"></a>10 同步指令</h6><h5 id="共有设计和私有设计"><a href="#共有设计和私有设计" class="headerlink" title="共有设计和私有设计"></a>共有设计和私有设计</h5></div><div class="tags"><a href="/tags/Java/">Java</a><a href="/tags/虚拟机/">虚拟机</a><a href="/tags/JVM/">JVM</a><a href="/tags/深入理解Java虚拟机读书笔记/">深入理解Java虚拟机读书笔记</a></div><div class="post-nav"><a href="/2017/10/30/第7章-虚拟机类加载机制/" class="pre">第7章 虚拟机类加载机制</a><a href="/2017/10/30/第5章-调优案例分析与实战/" class="next">第5章 调优案例分析与实战</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank" class="search-form"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://yoursite.com"/></form></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/学习/">学习</a><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/技术/学习/JVM/">JVM</a></li></ul></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/Java/" style="font-size: 15px;">Java</a> <a href="/tags/虚拟机/" style="font-size: 15px;">虚拟机</a> <a href="/tags/JVM/" style="font-size: 15px;">JVM</a> <a href="/tags/深入理解Java虚拟机读书笔记/" style="font-size: 15px;">深入理解Java虚拟机读书笔记</a> <a href="/tags/感想/" style="font-size: 15px;">感想</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第8章-虚拟机字节码执行引擎/">第8章 虚拟机字节码执行引擎</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第7章-虚拟机类加载机制/">第7章 虚拟机类加载机制</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第6章-类文件结构/">第6章 类文件结构</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第5章-调优案例分析与实战/">第5章 调优案例分析与实战</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第4章-虚拟机性能监控与故障处理工具/">第4章 虚拟机性能监控与故障处理工具</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第3章-垃圾收集器与内存分配策略/">第3章 垃圾收集器与内存分配策略</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第2章-Java内存区域与内存溢出异常/">第2章 Java内存区域与内存溢出异常</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/第1章-走进Java/">第1章 走进Java</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/30/我的第一篇博客/">我的第一篇博客</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="https://shalk.github.io/" title="shalk" target="_blank">shalk</a><ul></ul><a href="http://luckylau.tech/" title="luckylau" target="_blank">luckylau</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2017 <a href="/." rel="nofollow">WChCh's Blog.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.1.20/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.1.20/jquery.fancybox.min.css"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>
