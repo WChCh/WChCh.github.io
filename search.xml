@@ -1,19 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search>
-  <entry>
-    <title><![CDATA[我的第一篇博客]]></title>
-    <url>%2F2017%2F10%2F30%2F%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E5%8D%9A%E5%AE%A2%2F</url>
-    <content type="text"><![CDATA[This is my first blog! I am glad to share my lift and technologise with everyone!]]></content>
-      <categories>
-        <category>生活</category>
-      </categories>
-      <tags>
-        <tag>感想</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title><![CDATA[Hello World]]></title>
-    <url>%2F2017%2F10%2F28%2Fhello-world%2F</url>
-    <content type="text"><![CDATA[Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub. Quick StartCreate a new post1$ hexo new "My New Post" More info: Writing Run server1$ hexo server More info: Server Generate static files1$ hexo generate More info: Generating Deploy to remote sites1$ hexo deploy More info: Deployment]]></content>
-  </entry>
+<search> 
+  
+    
+    <entry>
+      <title><![CDATA[我的第一篇博客]]></title>
+      <url>/2017/10/30/%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E5%8D%9A%E5%AE%A2/</url>
+      <content type="html"><![CDATA[<p>首先要纪念一下，这是我第一次写博客，这也是我的第一篇博文。我希望以后几年，十几年，几十年都能够坚持写下去，与大家分享生活与工作中一切好的东西！</p>
+<a id="more"></a>
+<p>我一直都想把工作和生活中的点点滴滴以博文的方式跟大家分享，但是一直都没有付诸行动（其实就是懒），直到前段时间跟同一年以应届生身份进公司的同事聊天时才知道他一直在坚持写博客，他向我推荐了他的博客，还告诉我怎么去搭建博客站点（这里要感谢github），这才完全激起了我的兴趣。当然我不希望自己只有三分钟热度，我希望自己能够一直写下去。</p>
+<p>当然，不只是一时兴起，我打算写博客还基于几个原因：</p>
+<ol>
+<li>我一直是分享的受益者，这些年通过大家的分享帮助我解决了很多问题，因此，我希望尽最大努力回馈大家；</li>
+<li>将工作中遇到的一些坑或是解决的某些技术问题做一个总结，以备后期查阅；</li>
+<li>记录技术与生活相关的学习笔记，展示自己的技术栈，督促自己必须不断地学习；</li>
+<li>写一些生活感想，记录一些生活的美好瞬间；</li>
+</ol>
+<p>加油吧，少年！（嘿嘿）</p>
+]]></content>
+      
+        <categories>
+            
+            <category> 生活 </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> 感想 </tag>
+            
+        </tags>
+        
+    </entry>
+    
+  
+  
 </search>
