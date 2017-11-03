@@ -3,6 +3,40 @@
   
     
     <entry>
+      <title><![CDATA[git使用教程]]></title>
+      <url>/2017/11/03/git%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/</url>
+      <content type="html"><![CDATA[<p>打算要复习一下git的使用方法，搜了几篇不错的文章。我就不直接照搬全文了，连接如下：</p>
+<p>比较全面的教程：</p>
+<p><a href="http://www.imooc.com/article/20411" target="_blank" rel="external">Git使用教程,最详细，最傻瓜，最浅显，真正手把手教</a></p>
+<p>针对几种应用场景的教程：</p>
+<p><a href="http://www.imooc.com/article/19060" target="_blank" rel="external">git入门，先学会这几个姿势</a></p>
+<p>常用命令详解：<br><a href="http://www.imooc.com/article/1111" target="_blank" rel="external">Git常用命令备忘，希望对学习Git的朋友们有所帮助</a></p>
+<p>git进阶：</p>
+<p><a href="http://www.imooc.com/article/1111" target="_blank" rel="external">25个 Git 进阶技巧</a></p>
+]]></content>
+      
+        <categories>
+            
+            <category> 技术 </category>
+            
+            <category> 学习 </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> git </tag>
+            
+            <tag> 教程 </tag>
+            
+            <tag> 版本控制系统 </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[第8章 虚拟机字节码执行引擎]]></title>
       <url>/2017/10/30/%E7%AC%AC8%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AD%97%E8%8A%82%E7%A0%81%E6%89%A7%E8%A1%8C%E5%BC%95%E6%93%8E/</url>
       <content type="html"><![CDATA[<p>在不同的虚拟机实现里面，执行引擎在执行Java代码的时候可能会有解释执行（通过解释器执行）和编译执行（通过即时编译器产生本地代码执行）两种选择，可能能两者兼备，甚至还可能会包含几个不同级别的编译器执行引擎。</p>
