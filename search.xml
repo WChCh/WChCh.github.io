@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[记一次tomcat崩溃问题排查过程]]></title>
+    <url>%2F2017%2F11%2F10%2F%E8%AE%B0%E4%B8%80%E6%AC%A1tomcat%E5%B4%A9%E6%BA%83%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B%2F</url>
+    <content type="text"><![CDATA[产品在生产环境中跑了一段时间后，每天早晨运维人员都会发现程序崩溃，无法提供服务，重启之后就好了，而且白天都没问题，运维人员因此叫苦连天。 查看日志发现有堆内存溢出的提示，并且都是发生在凌晨一点钟左右，但找不到是哪个线程导致的，重启之后通过jstack、jmap、jstat等命令查看各项指标都正常。无奈只能在catalina.sh配置文件中加入JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/.../oom.hprof&quot;配置项，当程序因为内存溢出崩溃时能够查看当时的jvm内存使用情况。 隔天早上再次发生崩溃，产生了oom.hprof文件，让运维人员传过来，导入MemoryAnalyzer中进行分析。分析过程中发现某个定时任务的线程对象占用了将近一半的堆内存，并且对象类型为： 1234567891011121314151617181920212223242526272829303132333435363738394041java.lang.Object[4102267] @ 0xe817b3f0 16,409,088 864,074,952 48.56% ..+com.mysql.jdbc.ByteArrayRow @ 0xb0176c20 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xe3044560 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xce6ac738 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xaf2ab198 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xa82fbcc0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xcbce65f8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb1b9e200 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb515f4a0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xde9fab68 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xac3662a8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xd3b9e6f8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xe3044690 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xa51149a8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xafc57d70 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0x8f536ab0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xd6bb6588 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb0d39428 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0x98c5da88 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb2de5950 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xde9fac98 通过在网上搜索答案，初步猜测是一次从数据库中读取了大量的数据到内存中导致内存溢出的崩溃问题。接着查看线程栈，定位到了线程中导致问题的某一处代码。 这一处代码做的是一个根据条件定期删除数据库的操作，这是经过本地调试发现每次做删除操作时并没有报异常，但也没删除成功。此时可以了解了问题发生的原因，由于此每次都没能成功删除数据，但是还会有新数据不断加入，日积月累数据量会越来越庞大。每次做删除操作时JPA预先加载所有要删除的数据到内存中，这时大数据量会导致JVM实例堆溢出崩溃。 定位到问题代码之后要分析一下为什么没有成功删除数据。这里要先说一下，我们项目中使用的是spring boot，持久层api使用的是spring data jpa。通过分析发现代码中没有在service层的实现类或是相关方法上加@transactional，导致的删除数据时事务不生效。 但是当我给service层实现类加上@transactional时，删除数据仍然不成功，分析代码发现，他这个service层实现类不但有implements接口，还extends抽象类，并不是纯碎的接口实现，即使直接加在方法上也不行，为什么不成功我暂时还没有时间去研究。无奈只能在repository层加，操作才成功，显然这种方法很不好！没办法，先交给代码关系人来解决吧，我也没时间和精力！]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>问题排查</tag>
+        <tag>OutOfMemoryError</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[Java应用排查笔记]]></title>
     <url>%2F2017%2F11%2F07%2FJava%E5%BA%94%E7%94%A8%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E7%AC%94%E8%AE%B0%2F</url>
     <content type="text"><![CDATA[前一段时间跑在tomcat的java应用出现线程挂掉，CPU占用率持续过高，堆溢出的问题。首先说一下这件事的经过。 我在我的模块中有两个定时任务，使用的是spring boot的注解@Scheduled(fixedDelay=ONE_Minute)，后来出现这了两个定时任务都不再往redis缓存里面存放数据的问题。一开始没有经验，也没有打印足够的日志，所以从日志里面也看不出啥问题。 后来，我去除掉了定时任务，改成了直接new线程的方式（这种方式当然不好），并且详细打上了日志。但又出现问题了，但可喜的是这两个线程中只有一个不工作了（就是不缓存数据了，具体问题也不清楚），另外一个还很正常。这种情况出现了2到3次，我这时候还是束手无策，不知为何？ 我继续在网上搜索答案，说是用jps,jstat,jinfo,jmap,jhat,jstack这些命令可以做故障分析。下面是使用的过程。 首相使用jps查询运行tomcat的JVM虚拟机的进程： 1jps 得到一下结果： 122667 Bootstrap3116 Jps 其中Bootstrap代表的2667就是tomcat java虚拟机的进程号。有时候使用jps命令无法得到类似2667 Bootstrap的结果(好像重启tomcat之后好使)，那么可用ps -ef | grep tomcat得到进程号。 判断线程状态首先通过jstack -l pid来查看所有的线程栈,若果调用失败可使用stack -F pid强制导出。通过导出的线程堆栈信息来判断线程的状态，是否还存在？如果存在的话，处于什么状态？ 判断Java进程为何CPU占用率高可通过ps -Lfp pid或者ps -mp pid -o THREAD, tid, time或者top -Hp pid来判断java进程中哪个线程的CPU占用过高。 确定了线程的id之后，再通过jstack -l pid打印出的信息查看对应的线程的堆栈，确认线程的工作状态。参考链接：https://my.oschina.net/feichexia/blog/196575 判断OutOfMemoryError问题当发生OutOfMemoryError时希望把当时的内存数据保存下来以便于使用可视化工具（eclipse memory analyzer ）分析，可以在tomcat bin下的catalina.sh文件中加入相关参数。添加位置如下： 12345678fi# ----- Execute The Requested Command -----------------------------------------JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/cloudview/data/dump/oom.hprof&quot;# Bugzilla 37848: only output this if we have a TTYif [ $have_tty -eq 1 ]; then -XX:HeapDumpPath=/cloudview/data/dump/oom.hprof表示文件保存的路径以格式。 发生OutOfMemoryError可能会导致线程异常终止，可用catch Throwable捕捉并打印最后的堆栈信息。另外不建议单独使用new线程的方式，可使用线程池来保证重启线程。]]></content>
