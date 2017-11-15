@@ -1,1023 +1,275 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search> 
-  
-    
-    <entry>
-      <title><![CDATA[使用easyUI组件combogrid面板相关问题]]></title>
-      <url>/2017/11/15/%E4%BD%BF%E7%94%A8easyUI%E7%BB%84%E4%BB%B6combogrid%E9%9D%A2%E6%9D%BF%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98/</url>
-      <content type="html"><![CDATA[<h4 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h4><p>使用combogrid组件时，弹出的面板宽度总是与数据框的长度一样，并不是想官方demo那样弹出理想的宽度。各种属性各种设置也没解决问题，网上找了好久也没有找到答案。</p>
-<h4 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h4><p>后来继续翻官方demo，发现了一个属性，试了一下成功了。属性如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">panelMinWidth : &apos;50%&apos;,</div></pre></td></tr></table></figure></p>
-<p>设置值为：<code>50%</code>。</p>
-<h4 id="下来面板中加入输入框"><a href="#下来面板中加入输入框" class="headerlink" title="下来面板中加入输入框"></a>下来面板中加入输入框</h4><p>因为combogrid继承combo以及datagrid，因此可是使用combo以及datagrid的特性。通过”toolbar”属性可以引入输入框形成组合查询。</p>
-<p><em>注意问题</em>：在Firefox浏览器中可能会出现数据框加载显示效果问题，可以先默认隐藏输入框，再在列表初始化函数中通过js显示该输入框。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> 前端 </category>
-            
-            <category> js </category>
-            
-            <category> EasyUI </category>
-            
-            <category> Combo </category>
-            
-            <category> Datagrid </category>
-            
-            <category> Combogrid </category>
-            
-            <category> 问题 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> js </tag>
-            
-            <tag> EasyUI </tag>
-            
-            <tag> Combo </tag>
-            
-            <tag> Datagrid </tag>
-            
-            <tag> Combogrid </tag>
-            
-            <tag> 问题 </tag>
-            
-            <tag> 前端 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[记一次tomcat崩溃问题排查过程]]></title>
-      <url>/2017/11/10/%E8%AE%B0%E4%B8%80%E6%AC%A1tomcat%E5%B4%A9%E6%BA%83%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B/</url>
-      <content type="html"><![CDATA[<p>产品在生产环境中跑了一段时间后，每天早晨运维人员都会发现程序崩溃，无法提供服务，重启之后就好了，而且白天都没问题，运维人员因此叫苦连天。</p>
-<p>查看日志发现有堆内存溢出的提示，并且都是发生在凌晨一点钟左右，但找不到是哪个线程导致的，重启之后通过jstack、jmap、jstat等命令查看各项指标都正常。无奈只能在<code>catalina.sh</code>配置文件中加入<code>JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/.../oom.hprof&quot;</code>配置项，当程序因为内存溢出崩溃时能够查看当时的jvm内存使用情况。</p>
-<p>隔天早上再次发生崩溃，产生了<code>oom.hprof</code>文件，让运维人员传过来，导入<code>MemoryAnalyzer</code>中进行分析。分析过程中发现某个定时任务的线程对象占用了将近一半的堆内存，并且对象类型为：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div></pre></td><td class="code"><pre><div class="line">java.lang.Object[4102267] @ 0xe817b3f0</div><div class="line"> 16,409,088 864,074,952 48.56% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb0176c20</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xe3044560</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xce6ac738</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xaf2ab198</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xa82fbcc0</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xcbce65f8</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb1b9e200</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb515f4a0</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xde9fab68</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xac3662a8</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xd3b9e6f8</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xe3044690</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xa51149a8</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xafc57d70</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0x8f536ab0</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xd6bb6588</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb0d39428</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0x98c5da88</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb2de5950</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xde9fac98</div></pre></td></tr></table></figure>
-<p>通过在网上搜索答案，初步猜测是一次从数据库中读取了大量的数据到内存中导致内存溢出的崩溃问题。接着查看线程栈，定位到了线程中导致问题的某一处代码。</p>
-<p>这一处代码做的是一个根据条件定期删除数据库的操作，这是经过本地调试发现每次做删除操作时并没有报异常，但也没删除成功。此时可以了解了问题发生的原因，由于此每次都没能成功删除数据，但是还会有新数据不断加入，日积月累数据量会越来越庞大。每次做删除操作时JPA预先加载所有要删除的数据到内存中，这时大数据量会导致JVM实例堆溢出崩溃。</p>
-<p>定位到问题代码之后要分析一下为什么没有成功删除数据。这里要先说一下，我们项目中使用的是spring boot，持久层api使用的是spring data jpa。通过分析发现代码中没有在service层的实现类或是相关方法上加<code>@transactional</code>，导致的删除数据时事务不生效。</p>
-<p>但是当我给service层实现类加上<code>@transactional</code>时，删除数据仍然不成功，分析代码发现，他这个service层实现类不但有implements接口，还extends抽象类，并不是纯碎的接口实现，即使直接加在方法上也不行，为什么不成功我暂时还没有时间去研究。无奈只能在repository层加，操作才成功，显然这种方法很不好！没办法，先交给代码关系人来解决吧，我也没时间和精力！</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 问题排查 </tag>
-            
-            <tag> OutOfMemoryError </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Java应用排查笔记]]></title>
-      <url>/2017/11/07/Java%E5%BA%94%E7%94%A8%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E7%AC%94%E8%AE%B0/</url>
-      <content type="html"><![CDATA[<p>前一段时间跑在tomcat的java应用出现线程挂掉，CPU占用率持续过高，堆溢出的问题。首先说一下这件事的经过。</p>
-<p>我在我的模块中有两个定时任务，使用的是spring boot的注解<code>@Scheduled(fixedDelay=ONE_Minute)</code>，后来出现这了两个定时任务都不再往redis缓存里面存放数据的问题。一开始没有经验，也没有打印足够的日志，所以从日志里面也看不出啥问题。</p>
-<p>后来，我去除掉了定时任务，改成了直接new线程的方式（这种方式当然不好），并且详细打上了日志。但又出现问题了，但可喜的是这两个线程中只有一个不工作了（就是不缓存数据了，具体问题也不清楚），另外一个还很正常。这种情况出现了2到3次，我这时候还是束手无策，不知为何？</p>
-<p>我继续在网上搜索答案，说是用<code>jps</code>,<code>jstat</code>,<code>jinfo</code>,<code>jmap</code>,<code>jhat</code>,<code>jstack</code>这些命令可以做故障分析。下面是使用的过程。</p>
-<p>首相使用<code>jps</code>查询运行tomcat的JVM虚拟机的进程：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">jps</div></pre></td></tr></table></figure>
-<p>得到一下结果：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">2667 Bootstrap</div><div class="line">3116 Jps</div></pre></td></tr></table></figure>
-<p>其中<code>Bootstrap</code>代表的<code>2667</code>就是tomcat java虚拟机的进程号。有时候使用<code>jps</code>命令无法得到类似<code>2667 Bootstrap</code>的结果(好像重启tomcat之后好使)，那么可用<code>ps -ef | grep tomcat</code>得到进程号。</p>
-<h4 id="判断线程状态"><a href="#判断线程状态" class="headerlink" title="判断线程状态"></a>判断线程状态</h4><p>首先通过<code>jstack -l pid</code>来查看所有的线程栈,若果调用失败可使用<code>stack -F pid</code>强制导出。通过导出的线程堆栈信息来判断线程的状态，是否还存在？如果存在的话，处于什么状态？</p>
-<h4 id="判断Java进程为何CPU占用率高"><a href="#判断Java进程为何CPU占用率高" class="headerlink" title="判断Java进程为何CPU占用率高"></a>判断Java进程为何CPU占用率高</h4><p>可通过<code>ps -Lfp pid</code>或者<code>ps -mp pid -o THREAD, tid, time</code>或者<code>top -Hp pid</code>来判断java进程中哪个线程的CPU占用过高。</p>
-<p>确定了线程的id之后，再通过<code>jstack -l pid</code>打印出的信息查看对应的线程的堆栈，确认线程的工作状态。参考链接：<a href="https://my.oschina.net/feichexia/blog/196575" target="_blank" rel="external">https://my.oschina.net/feichexia/blog/196575</a></p>
-<h4 id="判断OutOfMemoryError问题"><a href="#判断OutOfMemoryError问题" class="headerlink" title="判断OutOfMemoryError问题"></a>判断OutOfMemoryError问题</h4><p>当发生<code>OutOfMemoryError</code>时希望把当时的内存数据保存下来以便于使用可视化工具（eclipse memory analyzer ）分析，可以在tomcat bin下的catalina.sh文件中加入相关参数。添加位置如下：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">fi</div><div class="line"></div><div class="line"># ----- Execute The Requested Command -----------------------------------------</div><div class="line"></div><div class="line">JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/cloudview/data/dump/oom.hprof&quot;</div><div class="line"></div><div class="line"># Bugzilla 37848: only output this if we have a TTY</div><div class="line">if [ $have_tty -eq 1 ]; then</div></pre></td></tr></table></figure>
-<p><code>-XX:HeapDumpPath=/cloudview/data/dump/oom.hprof</code>表示文件保存的路径以格式。</p>
-<p>发生<code>OutOfMemoryError</code>可能会导致线程异常终止，可用<code>catch Throwable</code>捕捉并打印最后的堆栈信息。另外不建议单独使用new线程的方式，可使用线程池来保证重启线程。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 问题排查 </tag>
-            
-            <tag> OutOfMemoryError </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第13章 线程安全与锁优化]]></title>
-      <url>/2017/11/04/%E7%AC%AC13%E7%AB%A0-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E4%B8%8E%E9%94%81%E4%BC%98%E5%8C%96/</url>
-      <content type="html"><![CDATA[<h4 id="线程安全"><a href="#线程安全" class="headerlink" title="线程安全"></a>线程安全</h4><h5 id="Java语言中的线程安全"><a href="#Java语言中的线程安全" class="headerlink" title="Java语言中的线程安全"></a>Java语言中的线程安全</h5><p>我们可以将java语言中各种操作共享的数据分为以下5类：</p>
-<ol>
-<li>不可变：1 final关键字修饰的变量（没有发生this引用逃逸的情况）；2 Java.lang.String类的对象，调用它的方法是只会返回一个新构造的字符串对象；3 枚举类型；4 Long和Double等数值包装类型；</li>
-<li>绝对线程安全：Java API中标注自己是线程安全的类，大多数都不是绝对的线程安全；</li>
-<li>相对线程安全：相对的线程安全就是我们通常意义上所讲的线程安全，它需要保证对这个对象单独的操作是线程安全的。Vector、HashTable、Collections的synchronizedCollection()方法包装的集合等都属于这种类型；</li>
-<li>线程兼容；</li>
-<li>线程对立；</li>
-</ol>
-<h5 id="线程安全的实现方法"><a href="#线程安全的实现方法" class="headerlink" title="线程安全的实现方法"></a>线程安全的实现方法</h5><h6 id="1-互斥同步"><a href="#1-互斥同步" class="headerlink" title="1. 互斥同步"></a>1. 互斥同步</h6><p>Java中，最基本的互斥同步手段就是synchronized关键字。首先synchronized同步块对同一条线程来说是可以重入的，不会出现自己把自己锁死的问题；其次，同步块在已进入的线程执行完之前，会阻塞后面其他线程的进入。</p>
-<p>除了synchronized之外，我们还可以使用java.util.concurrent包中的重入锁（ReentrantLock）来实现同步。</p>
-<p>ReentrantLock增加的高级功能：</p>
-<ol>
-<li>等待可中断</li>
-<li>可实现公平锁</li>
-<li>锁可以绑定多个条件</li>
-</ol>
-<h6 id="2-非阻塞同步"><a href="#2-非阻塞同步" class="headerlink" title="2. 非阻塞同步"></a>2. 非阻塞同步</h6><h6 id="3-无同步方案"><a href="#3-无同步方案" class="headerlink" title="3. 无同步方案"></a>3. 无同步方案</h6><ol>
-<li>可重入代码</li>
-<li>线程本地存储</li>
-</ol>
-<h4 id="锁优化"><a href="#锁优化" class="headerlink" title="锁优化"></a>锁优化</h4><ol>
-<li>自旋锁与自适应自旋</li>
-<li>消除锁</li>
-<li>锁粗化</li>
-<li>轻量级锁</li>
-<li>偏向锁</li>
-</ol>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第12章 Java内存模型与线程]]></title>
-      <url>/2017/11/04/%E7%AC%AC12%E7%AB%A0-Java%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%BA%BF%E7%A8%8B/</url>
-      <content type="html"><![CDATA[<p>“内存模型”可以理解为在特定的操作协议下对特定的内存或高速缓存进行读写访问的过程抽象。</p>
-<h4 id="Java内存模型"><a href="#Java内存模型" class="headerlink" title="Java内存模型"></a>Java内存模型</h4><h5 id="1-主内存与工作内存"><a href="#1-主内存与工作内存" class="headerlink" title="1 主内存与工作内存"></a>1 主内存与工作内存</h5><p>Java内存模型的主要目标是定义程序中各个变量的访问规则，即在虚拟机中将变量存储到内存和从内存中取出变量这样的底层细节。此处的变量与Java编程中所说的变量有所区别，它包括了实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不会被共享，自然就不会存在竞争问题。</p>
-<p>工作过程：所有的变量都存储在主内存中。每条线程还有自己的工作内存（属于线程私有，类似处理器的高速缓存），线程的工作内存中保存了被该线程使用到的变量的主内存副本拷贝，线程对变量的所有操作都必须在工作内存中进行，而不能直接读写主内存中的变量，线程间变量值的传递均需要通过主内存来完成。</p>
-<h5 id="2-内存间交互操作"><a href="#2-内存间交互操作" class="headerlink" title="2 内存间交互操作"></a>2 内存间交互操作</h5><p>Java内存模型中定义了一下8种操作来完成主内存和工作内存间的交互操作，虚拟机实现时必须保证下面提及的每一种操作都是原子的、不可再分的。</p>
-<ol>
-<li>lock</li>
-<li>unlock</li>
-<li>read</li>
-<li>load</li>
-<li>use</li>
-<li>assign</li>
-<li>store</li>
-<li>write</li>
-</ol>
-<h5 id="3-对于volatile型变量的特殊规则"><a href="#3-对于volatile型变量的特殊规则" class="headerlink" title="3 对于volatile型变量的特殊规则"></a>3 对于volatile型变量的特殊规则</h5><p>在各个线程的工作内存中，volatile变量也可以存在不一致的情况，但是由于每次使用前都要先<strong>刷新</strong>，执行引擎看不到不一致的情况。</p>
-<p>Java里面的运算并非原子操作，导致volatile变量的运算在并发下一样是不安全的。</p>
-<p><strong>使用volatile变量第一是保证此变量对所有线程的可见性。</strong></p>
-<p>volatile变量不安全场景：</p>
-<ol>
-<li>多线程并发对volatile变量 i++;</li>
-</ol>
-<p>由于volatile变量只能保证可见性，在不符合一下两条规则的运算场景中，我们仍然要通过加锁（使用synchronized或java.util.concurrent中的原子类）来保证原子性。</p>
-<ol>
-<li>运算结果并不依赖变量的当前值，或者能够确保只有单一的线程修改变量的值；</li>
-<li>变量不需要与其他的状态变量共同参与不变约束。</li>
-</ol>
-<p>volatile适用场景：</p>
-<ol>
-<li><p><strong>使用volatile变量的第二个语义是禁止指令重排序优化。</strong></p>
-</li>
-</ol>
-<p>选用volatile的意义：大多数场景下volatile的总开销仍然要比锁低，我们在volatile与锁之中选择的唯一依据仅仅是volatile的语义能否满足使用场景的需求。</p>
-<h5 id="4-对于long和double型变量的特殊规则"><a href="#4-对于long和double型变量的特殊规则" class="headerlink" title="4 对于long和double型变量的特殊规则"></a>4 对于long和double型变量的特殊规则</h5><p>目前各平台下的商用虚拟机几乎都选择把64位数据的读写操作作为原子操作来对待，因此我们在编写代码时一般不需要把用的long和double变量专门声明为volatile。</p>
-<h5 id="4-原子性、可见性与有序性"><a href="#4-原子性、可见性与有序性" class="headerlink" title="4 原子性、可见性与有序性"></a>4 原子性、可见性与有序性</h5><p>原子性：由Java内存模型来直接保证的原子性操作包括read、load、assign、use、store和write，我们大致可以认为基本数据类型的访问读写是具备原子性的（long和double的非原子协定几乎不会发生例外情况）</p>
-<p>可见性：可见性是指当一个线程修改了共享变量的值，其他线程能够立即得知这个修改。除了volatile之外，synchronized和final也能实现可见性。同步块的可见性是由“对一个变量执行unlock操作之前，必须把此变量同步回到主内存中”这条规则获得的，而final关键字的可见性是指：被final修饰的字段在构造器中一旦初始化完成，并且构造器没有把“this”的引用传递出去，那在其他线程中就能看见final字段的值。</p>
-<p>有序性：Java语言提供了volatile和synchronized两个关键字来保证线程之间操作的有序性，volatile关键字本身就包含了禁止指令重排序的语义，而synchronized的锁操作决定了持有同一个锁的两个同步块只能串行地进入。</p>
-<p>Java程序中天然的有序性可以总结为一句话：如果在本线程内观察，所有的操作都是有序的；如果在一个线程中观察另一个线程，所有的操作都是无序的。前半句是指“线程内表现为串行的语义”，后半句是指“指令重排序”线程和“工作内存与主内存同步延迟”现象。</p>
-<h5 id="6-先行发生原则"><a href="#6-先行发生原则" class="headerlink" title="6 先行发生原则"></a>6 先行发生原则</h5><p>Java内存模型下一些“天然的“先行发生关系，这些先行发生关系无须任何同步器协助就已经存在，可以在编码中直接使用。</p>
-<ol>
-<li>程序次序规则</li>
-<li>管道锁定规则</li>
-<li>volatile变量规则</li>
-<li>线程启动规则</li>
-<li>线程终止规则</li>
-<li>线程中断规则</li>
-<li>对象终结规则</li>
-<li>传递性</li>
-</ol>
-<h4 id="Java与线程"><a href="#Java与线程" class="headerlink" title="Java与线程"></a>Java与线程</h4><h5 id="java线程的实现"><a href="#java线程的实现" class="headerlink" title="java线程的实现"></a>java线程的实现</h5><p>对于Sun JDK来说，它的Windows版与Linux版都是使用一对一的线程模型实现的，一条Java线程就映射到一条轻量级进程之中。</p>
-<h4 id="Java线程调度"><a href="#Java线程调度" class="headerlink" title="Java线程调度"></a>Java线程调度</h4><p>调度方式有两种：</p>
-<ol>
-<li>协同式线程调度</li>
-<li>抢占式线程调度</li>
-</ol>
-<h4 id="状态转换"><a href="#状态转换" class="headerlink" title="状态转换"></a>状态转换</h4><p>Java定义了5中线程状态</p>
-<ol>
-<li>新建（NEW）</li>
-<li>运行（Runable）：Runable包括操作系统线程状态中的Running和Ready。</li>
-<li>无期限等待（Waiting）</li>
-<li>期限等待（Timed Waiting）</li>
-<li>阻塞（Blocked）</li>
-<li>结束（Terminated）</li>
-</ol>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hyper-V之WMI、J-Interop]]></title>
-      <url>/2017/11/03/Hyper-V%E4%B9%8BWMI%E3%80%81J-Interop/</url>
-      <content type="html"><![CDATA[<h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>经过调研发现要通过调用WMI接口来实现对Hyper-V的管理，由于之前没有相关的经验所以通过网上搜索来理解什么是WMI。</p>
-<p>关于使用何种编程语言调用WMI，微软官网给出的是封装很友好的c#和powershell脚本接口，但目前公司的开发语言主要为Java，所以经过调研是能使用J-Interop。J-Interop是一个基于Java语言的WMI封装库，但是用方式还是太过于原始，使用上不是很友好，还得需要进一步封装，当然这一部分不在本文的编写范围内。</p>
-<h3 id="什么是WMI？"><a href="#什么是WMI？" class="headerlink" title="什么是WMI？"></a>什么是WMI？</h3><p>官网介绍是：</p>
-<p>Windows Management Instrumentation (WMI) is the Microsoft implementation of Web-Based Enterprise Management (WBEM), which is an industry initiative to develop a standard technology for accessing management information in an enterprise environment. WMI uses the Common Information Model (CIM) industry standard to represent systems, applications, networks, devices, and other managed components. CIM is developed and maintained by the Distributed Management Task Force (DMTF). <a href="https://msdn.microsoft.com/en-us/library/aa384642(v=vs.85" target="_blank" rel="external">About WMI</a>.aspx)</p>
-<p>以下WMI相关的内容转载自：<a href="http://blog.csdn.net/ilovepxm/article/details/6690224" target="_blank" rel="external">http://blog.csdn.net/ilovepxm/article/details/6690224</a></p>
-<h3 id="WMI的组成？"><a href="#WMI的组成？" class="headerlink" title="WMI的组成？"></a>WMI的组成？</h3><p>严格说来，WMI由四部分组成：</p>
-<ol>
-<li>公共信息模型对象管理器——CIMOM</li>
-<li>公共信息模型——CIM</li>
-<li>WMI提供程序</li>
-<li>WMI脚本对象库<br>其中其第1、2、3三个部分，在使用中很少加以区别，我们一般统称为CIM库。<br>用WMI脚本对象库访问cim库。<br>本质：是一个带很多分支的树状数据库，是一项服务！</li>
-</ol>
-<h3 id="WMI能做什么？"><a href="#WMI能做什么？" class="headerlink" title="WMI能做什么？"></a>WMI能做什么？</h3><p>利用WMI可以高效地管理远程和本地的计算机.WMI是WBEM模型的一种实现。</p>
-<p>WBEM模型最关键的部分是它的数据模型（或描述和定义对象的方式）、编码规范（Encoding Specification），以及在客户端和服务器端之间传输数据的模式。<br>CIM即WBEM的数据模型！</p>
-<p>CIM是一个用来命名计算机的物理和逻辑单元的标准的命名系统（或称为命名模式），例如硬盘的逻辑分区、正在运行的应用的一个实例，或者一条电缆。</p>
-<p>WBEM模型：基于web的企业管理，为管理企业环境开发一套标准接口集。</p>
-<p>WMI作为一种规范和基础结构，通过它可以访问、配置、管理和监视几乎所有的Windows资源，比如用户可以在远程计算机器上启动一个进程；设定一个在特定日期和时间运行的进程；远程启动计算机；获得本地或远程计算机的已安装程序列表；查询本地或远程计算机的Windows事件日志等等。</p>
-<p>WMI通过提供一致的模型和框架，所有的 Windows 资源均被描述并公开给外界。最好的一点是，系统管理员可以使用 WMI 脚本库创建系统管理脚本，从而管理任何通过 WMI 公开的 Windows 资源！</p>
-<h3 id="什么是J-Interop？"><a href="#什么是J-Interop？" class="headerlink" title="什么是J-Interop？"></a>什么是J-Interop？</h3><p>官网介绍如下：</p>
-<p>j-Interop is a Java Open Source library (under LGPL) that implements the DCOM wire protocol (MSRPC) to enable development of Pure, Bi-Directional, Non-Native Java applications which can interoperate with any COM component.</p>
-<p>The implementation is itself purely in Java and does not use Java Native Interface (JNI) to provide COM access. This allows the library to be used from any Non-Windows platform.</p>
-<p>It comes with pre-implemented packages for automation. This includes support for IDispatch, ITypeInfo, and ITypeLib. For more flexibility (in the cases where automation is not supported), it provides an API set to directly invoke operations on a COM server.</p>
-<p>Another important feature is allowing full access and manipulation (C-R-U-D) of the Windows Registry in a platform independent manner.<br>The implementation has been tested on all advanced Windows and Fedora platform(s) and displays upward compatibility from JRE 1.3.1.</p>
-<p>通过J-Interop就可以实现对WMI的访问。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> Hyper-V </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Hyper-V </tag>
-            
-            <tag> 虚拟化 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[在Hyper-V系列文章之前]]></title>
-      <url>/2017/11/03/%E5%9C%A8Hyper-V%E7%B3%BB%E5%88%97%E6%96%87%E7%AB%A0%E4%B9%8B%E5%89%8D/</url>
-      <content type="html"><![CDATA[<p>目前正在做公司的项目就快要验收了，打算将项目中与Hyper-V相关的笔记做一个整理。项目中我们的云管平台需要接管用户的hyper-v虚拟机，能够实现对Hyper-V虚拟机的新建、删除、修改、启动、停止、web console、客户端 console等功能，由于首次接触Hyper-V相关的东西，我的Hyper-V系列文章主要记录我的一些学习过程，希望我记录的东西能够帮助到大家，因为能够完成这个项目阶段的开发也是离不开大家的帮助。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> Hyper-V </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Hyper-V </tag>
-            
-            <tag> 虚拟化 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[git使用教程]]></title>
-      <url>/2017/11/03/git%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/</url>
-      <content type="html"><![CDATA[<p>打算要复习一下git的使用方法，搜了几篇不错的文章。我就不直接照搬全文了，连接如下：</p>
-<p>比较全面的教程：</p>
-<p><a href="http://www.imooc.com/article/20411" target="_blank" rel="external">Git使用教程,最详细，最傻瓜，最浅显，真正手把手教</a></p>
-<p>针对几种应用场景的教程：</p>
-<p><a href="http://www.imooc.com/article/19060" target="_blank" rel="external">git入门，先学会这几个姿势</a></p>
-<p>常用命令详解：<br><a href="http://www.imooc.com/article/1111" target="_blank" rel="external">Git常用命令备忘，希望对学习Git的朋友们有所帮助</a></p>
-<p>git进阶：</p>
-<p><a href="http://www.imooc.com/article/1111" target="_blank" rel="external">25个 Git 进阶技巧</a></p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> git </tag>
-            
-            <tag> 教程 </tag>
-            
-            <tag> 版本控制系统 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第8章 虚拟机字节码执行引擎]]></title>
-      <url>/2017/10/30/%E7%AC%AC8%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AD%97%E8%8A%82%E7%A0%81%E6%89%A7%E8%A1%8C%E5%BC%95%E6%93%8E/</url>
-      <content type="html"><![CDATA[<p>在不同的虚拟机实现里面，执行引擎在执行Java代码的时候可能会有解释执行（通过解释器执行）和编译执行（通过即时编译器产生本地代码执行）两种选择，可能能两者兼备，甚至还可能会包含几个不同级别的编译器执行引擎。</p>
-<h4 id="运行时栈帧结构"><a href="#运行时栈帧结构" class="headerlink" title="运行时栈帧结构"></a>运行时栈帧结构</h4><p>栈帧是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈的栈元素。</p>
-<p>栈帧存储了方法的局部变量表、操作数栈、动态链接和方法返回地址等信息。</p>
-<p>在编译程序代码的时候，栈帧中需要多大的局部变量表，多深的操作数栈都已经完全确定了，并且写入到方法表的Code属性中，因此一个栈帧需要分配多少内存，不会受到程序运行期变量数据的影响，而仅仅取决于具体的虚拟机实现。</p>
-<h4 id="局部变量表"><a href="#局部变量表" class="headerlink" title="局部变量表"></a>局部变量表</h4><p>局部变量表是一组变量值存储空间，用于存放方法参数和方法内部定义的局部变量。</p>
-<p>reference类型表示对一个对象实例的引用，虚拟机实现至少都应当能通过这个引用做到两点：</p>
-<ol>
-<li>从此引用中直接或间接地查找到对象在Java堆中的数据存放的起始地址索引。</li>
-<li>此引用中直接或间接地查找到对象所属数据类型在方法区中的存储的类型信息，否则无法实现Java语言规范中定义的语法约束约束。</li>
-</ol>
-<p>Java语言中明确的64位的数据类型只有long和double两种。对于64位的数据类型，虚拟机会以高位对齐的方式为其分配两个连续的Slot空间。</p>
-<p>虚拟机通过索引定位的方式使用局部变量表，索引值的范围是从0开始至局部变量表最大的Slot数量。</p>
-<p>局部变量表中第0位索引的Slot默认是用于传递方法所属对象是的引用，在方法中可通过关键字“this”来访问到这个隐藏的参数。其余参数则按照参数表顺序排列，参数表分配完毕后，再根据方法体内部定义的变量顺序和作用与分配其余的Slot。</p>
-<p><strong>局部变量与类变量不一样，如果一个局部变量定义了但没有赋初始值是不能使用的，不要认为java中任何情况下都存在诸如整型变量默认为0，布尔型变量默认为false等，如以下代码</strong></p>
-<a id="more"></a>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">//未赋值的局部变量</div><div class="line">public static void main(String [] args)&#123;</div><div class="line">    int a;</div><div class="line">    System.out.println(a);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h4 id="操作数栈（理解是充当寄存器的角色）"><a href="#操作数栈（理解是充当寄存器的角色）" class="headerlink" title="操作数栈（理解是充当寄存器的角色）"></a>操作数栈（理解是充当寄存器的角色）</h4><p>操作数栈也常称为操作栈，它是一个后入先出栈。同局部变量表一样，操作数栈的最大深度也在编译的时候写入到Code属性的max_stacks数据项中。</p>
-<ol>
-<li>操作数栈的每一个元素可以是任意的Java数据类型。32位数据类型所占的栈容量为1,64位数据类型所占的栈容量为2。</li>
-</ol>
-<h4 id="动态连接"><a href="#动态连接" class="headerlink" title="动态连接"></a>动态连接</h4><p>每个栈帧都包含一个指向运行时常量池中该栈帧所属方法的引用，持有这个引用是为了支持方法调用过程中的动态连接。</p>
-<h4 id="方法返回地址"><a href="#方法返回地址" class="headerlink" title="方法返回地址"></a>方法返回地址</h4><p>当一个方法开始执行后，只有两种方式可以退出这个方法：</p>
-<ol>
-<li>正常退出</li>
-<li>异常退出</li>
-</ol>
-<p>方法推出的过程实际上就等同于把当前栈帧出栈，因此退出是可能执行的操作有：</p>
-<ol>
-<li>回复上层方法的局部变量表和操作数栈；</li>
-<li>把返回值压入调用者栈帧的操作数占中；</li>
-<li>调整PC计数器的值以指向方法调用指令后面的一条指令等；</li>
-</ol>
-<h4 id="附加信息"><a href="#附加信息" class="headerlink" title="附加信息"></a>附加信息</h4><h4 id="方法调用"><a href="#方法调用" class="headerlink" title="方法调用"></a>方法调用</h4><p>方法调用不等于方法执行，方法调用阶段唯一的任务就是确定被调用方法的版本，暂时还不涉及方法内部的具体运行过程。</p>
-<h4 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h4><p>所有方法调用中的目标方法在Class文件里面都是一个常量池中的符号引用，在了加载的解析阶段，会将其中的一部分符号引用转化为直接引用。</p>
-<p><em>静态方法、私有方法、实例构造器、父类方法、被final修饰的方法都适合在类加载阶段进行解析，将符号引用解析为该方法的直接引用，这些方法称为非虚方法。</em></p>
-<p>解析调用一定是以静态的过程，在编译期间就完全确定，在类装载的解析阶段就会把涉及的符号引用全部转变为可确定的直接引用，不会延迟到运行期再去完成。</p>
-<h4 id="分派"><a href="#分派" class="headerlink" title="分派"></a>分派</h4><p>分派调用过程将会揭示多态性特征的一些最基本的体现。</p>
-<h5 id="1-静态分派"><a href="#1-静态分派" class="headerlink" title="1 静态分派"></a>1 静态分派</h5><p><em>静态方法会在类加载期就进行解析，而静态方法显然也是可以拥有重载版本的，选择重载版本的而过程也是通过静态分派完成的。</em></p>
-<h5 id="2-动态分派"><a href="#2-动态分派" class="headerlink" title="2 动态分派"></a>2 动态分派</h5><p>它和多态性的另外一个重要体现—<strong>*重写</strong>有着很密切的关系。</p>
-<h5 id="3-单分派和多分派"><a href="#3-单分派和多分派" class="headerlink" title="3 单分派和多分派"></a>3 单分派和多分派</h5><p>方法的接受者与方法的参数统称为方法的宗量，单分派是根据一个宗量对目标方法进行选择，多分派则是根据多于一个宗量对目标方法进行选择。</p>
-<p>今天的Java语言是一门静态多分派、动态单分派的语言。</p>
-<h5 id="4-虚拟机动态分派的实现"><a href="#4-虚拟机动态分派的实现" class="headerlink" title="4 虚拟机动态分派的实现"></a>4 虚拟机动态分派的实现</h5><p>使用虚方法表索引来代替元数据查找以提高性能。</p>
-<p>方法表一般在类加载的连接阶段进行初始化，准备了类的变量初始值后，虚拟机会把该类的方法表也初始化完毕。</p>
-<h4 id="动态类型语言支持-重要"><a href="#动态类型语言支持-重要" class="headerlink" title="动态类型语言支持(重要)"></a>动态类型语言支持(重要)</h4><p>什么是动态类型语言：动态类型语言的关键特征是它的类型检查的主题过程是在运行期而不是编译期。</p>
-<p>与运行时异常相对应的是连接时异常，例如很常见的NoClassDefFoundError便属于连接时异常。</p>
-<h4 id="基于栈的字节码解释执行引擎"><a href="#基于栈的字节码解释执行引擎" class="headerlink" title="基于栈的字节码解释执行引擎"></a>基于栈的字节码解释执行引擎</h4><h5 id="解释执行"><a href="#解释执行" class="headerlink" title="解释执行"></a>解释执行</h5><p>Javac编译器代码经过词法分析、语法分析到抽象语法树，再遍历语法树生成线性的字节码指令流的过程，Java程序的编译就是半独立的实现。</p>
-<h5 id="基于栈的指令集与基于寄存器的指令集"><a href="#基于栈的指令集与基于寄存器的指令集" class="headerlink" title="基于栈的指令集与基于寄存器的指令集"></a>基于栈的指令集与基于寄存器的指令集</h5><p>Java编译器输出的指令流，基本上是一种基于栈的指令集架构，指令流中的指令大比分都是零地址指令，它们依赖操作数栈进行工作。</p>
-<p>基于栈的指令集主要的优点：</p>
-<ol>
-<li>可移植；</li>
-<li>代码相对更加紧凑</li>
-<li>编译更加简单等</li>
-</ol>
-<p>缺点：</p>
-<ol>
-<li>完成相同功能需要的指令数量多。</li>
-<li>频繁地访问内存，相对处理器来说，内存始终是执行速度额瓶颈；</li>
-</ol>
-<h4 id="基于栈的解释器执行过程"><a href="#基于栈的解释器执行过程" class="headerlink" title="基于栈的解释器执行过程"></a>基于栈的解释器执行过程</h4>]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第7章 虚拟机类加载机制]]></title>
-      <url>/2017/10/30/%E7%AC%AC7%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6/</url>
-      <content type="html"><![CDATA[<p>虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。</p>
-<p>在Java语言里，类型的加载、连接和初始化都是在程序运行期间完成的。</p>
-<h4 id="类加载的时机"><a href="#类加载的时机" class="headerlink" title="类加载的时机"></a>类加载的时机</h4><p>类从被加载到虚拟机内存中开始，到卸载出内存为止，它的整个生命周期包括：加载、验证、准备、解析、初始化、使用和卸载。其中验证、准备、解析3个部分统称为连接。</p>
-<p>解析阶段不一定：它在某些情况下可以在初始化阶段之后再开始，这个是为了支持Java语言的运行时绑定（也称动态绑定或晚期绑定）。</p>
-<p>对于初始化阶段，虚拟机规范则是严格规定了有且只有5中情况必须立即对类进行“初始化”（而加载、验证、准备自然需要在此之前开始）：</p>
-<ol>
-<li>遇到new、getstatic、putstatic或invokestatic这4条字节指令时，如果类没有进行过初始化，则需要先触发其初始化。</li>
-<li>使用java。lang.reflect包的方法对类进行反射调用的时候，如果类没有进行过初始化，则需要先触发其初始化。</li>
-<li>当初始化一个类的时候，如果发现其父类还没有进行过初始化，则需要先触发其父类的初始化。</li>
-<li>当虚拟机启动时，用户需要制定一个要执行的主类，虚拟机会先初始化这个主类。</li>
-<li>5 当使用JDK1.7动态语言支持是，…….</li>
-</ol>
-<p>这5中场景中的行为成为对一个类进行主动引用，除此之外，所有引用类的方式都不会触发初始化，成为被动引用。</p>
-<h4 id="类加载过程"><a href="#类加载过程" class="headerlink" title="类加载过程"></a>类加载过程</h4><p>类加载的全过程，也就是加载、验证、准备、解析和初始化这个5个阶段。</p>
-<h5 id="1-加载"><a href="#1-加载" class="headerlink" title="1 加载"></a>1 加载</h5><p>在加载阶段，虚拟机需要完成一下3件事情：</p>
-<ol>
-<li>通过一个类的全限定名来获取定义此类的二进制字节流。</li>
-<li>将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构。</li>
-<li>在内存中生成一个代表这个类的java.lang.Class对象，作为方法区这个类的各种数据的访问入口，对于HotSpot虚拟机而言，Class对象比较特殊，它虽然是对象，但是存放在方法区里面。</li>
-</ol>
-<a id="more"></a>
-<p>数组类本身不通过类加载器创建，它是由Java虚拟机直接创建的。</p>
-<h5 id="2-验证"><a href="#2-验证" class="headerlink" title="2 验证"></a>2 验证</h5><p>验证是连接阶段的第一步，目的是为了确保Class文件的字节流中包含的信息符合当前虚拟机的要求，并且不会危害虚拟机自身的安全。</p>
-<p>验证阶段的4个检验动作：</p>
-<ol>
-<li>文件格式验证：通过这个阶段的验证后，字节流才会进入内存的方法区中进行存储，所以后面的3个验证阶段全部都是基于方法区的存储结构进行的，不会再直接操作字节流。</li>
-<li>元数据验证</li>
-<li>字节码验证：确定程序语义是合法的、符合逻辑的。</li>
-<li>符号引用验证</li>
-</ol>
-<h5 id="3-准备"><a href="#3-准备" class="headerlink" title="3 准备"></a>3 准备</h5><p>准备阶段是正式为类变量分配内存并设置类变量初始值的阶段，这些变量所使用的内存都将在方法区中进行分配。</p>
-<p><em>注意</em>：首先，这时候进行内存分配的仅包括类变量（被static修饰的变量），而不包括实例变量，实例变量将会在对象实例化时随着对象一起分配在Java堆中。其次，这里所说的初始值“通常情况”下是数据类型的零值。java程序的初始值赋值动作在初始化阶段才会执行。</p>
-<p><em>特殊情况</em>：如果类字段的字段属性表存在ConstantValue属性，那在准备阶段变量value就会被初始化为ConstantValue属性所指定的值，假设上面类变量value的定义为：</p>
-<p><code>public static final int value = 123</code></p>
-<p>编译时javac将会为value生成ConstantValue属性，在准备阶段虚拟机就会根据ConstantValue的设置将value赋值为123。因为关键字不但有<code>static</code>，还有<code>final</code>。</p>
-<h5 id="4-解析"><a href="#4-解析" class="headerlink" title="4 解析"></a>4 解析</h5><p>解析阶段是虚拟机将常量池内的符号引用替换为直接引用的过程。解析动作主要针对类或者接口、字段、类方法、接口方法、方法类型、方法句柄和调用点限定符7类符号引用进行，分别对应于常量池的……..。</p>
-<h5 id="5-初始化"><a href="#5-初始化" class="headerlink" title="5 初始化"></a>5 初始化</h5><p>类初始化阶段是类加载过程的最后一步。到了初始化阶段，才真正开始执行类中定义的Java程序代码（或者说字节码），是执行类构造器<clinit>()方法的过程。</clinit></p>
-<ol>
-<li>父类中定义的静态语句块要优先于子类的变量赋值操作。</li>
-</ol>
-<h4 id="类与类加载器"><a href="#类与类加载器" class="headerlink" title="类与类加载器"></a>类与类加载器</h4><h4 id="双亲委派模型"><a href="#双亲委派模型" class="headerlink" title="双亲委派模型"></a>双亲委派模型</h4><p>从Java虚拟机的角度将，只存在两种不同类型的类加载器：一种是启动类加载器，是虚拟机自身的一部分；另一种就是所有其他的类加载器。独立于虚拟机外部，并且全都继承自抽象类java.lang.ClassLoader。</p>
-<p>3种类型的类加载器：</p>
-<ol>
-<li>启动类加载器：加载<java_home>\lib目录中的并且是虚拟机识别的类库加载到虚拟机内存中。改加载器无法被Java程序直接引用。</java_home></li>
-<li>扩展类加载器：加载<java_home>\lib\ext目录中的类库。开发者可以直接使用。</java_home></li>
-<li>应用程序类加载器：负责加载用户类路径（ClassPath）上所指定的类库。</li>
-</ol>
-<p>如果有必要，还可以加入自己定义的类加载器。</p>
-<p><strong>这里类加载器之间的父子关系一般不会以继承的关系来实现，而是都使用组合关系来复用父类加载器的代码。</strong></p>
-<p>双亲委派模型的工作过程：……..。</p>
-<h4 id="破坏双亲委派模型"><a href="#破坏双亲委派模型" class="headerlink" title="破坏双亲委派模型"></a>破坏双亲委派模型</h4>]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第6章 类文件结构]]></title>
-      <url>/2017/10/30/%E7%AC%AC6%E7%AB%A0-%E7%B1%BB%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84/</url>
-      <content type="html"><![CDATA[<h4 id="无关性的基石"><a href="#无关性的基石" class="headerlink" title="无关性的基石"></a>无关性的基石</h4><p>各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。<br>无关性：</p>
-<ol>
-<li>平台无关性</li>
-<li>语言无关性<br>实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。</li>
-</ol>
-<h4 id="Class类文件的结构"><a href="#Class类文件的结构" class="headerlink" title="Class类文件的结构"></a>Class类文件的结构</h4><ol>
-<li>任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来说，类或接口并不一定都得定义在文件里。</li>
-<li>Class文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑第排列在Class文件中，中间没有任何分隔符。当遇到需要占用8位字节以上空间的数据项时，则会按照高位在前的方式分割成若干个8位字节进行存储（大端模式）。</li>
-<li>Class文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构中只有两种数据类型：无符号数和表。</li>
-<li>无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8编码构成字符串。</li>
-<li>表是由多个无符号数或者其他表作为数据项构成的复合数据类型，所有表都习惯性地以“_info”结尾。整个Class文件本质上就是一张表。</li>
-</ol>
-<h5 id="魔数与Class文件的版本"><a href="#魔数与Class文件的版本" class="headerlink" title="魔数与Class文件的版本"></a>魔数与Class文件的版本</h5><ol>
-<li>每个Class文件的头4个字节称为魔数，唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件，使用魔数不是扩展名来进行识别主要是基于安全方面的考虑，值为：0xCAFEBABE。</li>
-<li>紧接着魔数的4个字节存储的是Class文件的版本号：第5和第6个字节是次版本号，第7和第8个字节是主版本号。</li>
-</ol>
-<h5 id="常量池"><a href="#常量池" class="headerlink" title="常量池"></a>常量池</h5><p>紧接着主次版本号之后的是常量池入口，常量池可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，也是占用Class文件空间最大的数据项目之一，同时他还是在Class文件中第一个出现的表类型数据项目。</p>
-<p>常量池容量计数器是从1开始计数的，表示常量的个数。<br>常量翅中主要存放两大类常量：</p>
-<ol>
-<li>字面量</li>
-<li>符号引用</li>
-</ol>
-<a id="more"></a>
-<p>字面量比较接近于Java语言层面的常量概念，如字符串、声明为final的常量值等。而符号引用则属于编译原理方面的概念，包括了下面的三类常量：</p>
-<ol>
-<li>类和接口的全限定名</li>
-<li>字段的名称和描述符</li>
-<li>方法的名称和描述符<br>常量池中每一个常量都是一个表。</li>
-<li>常量池容量为21，表示有21项常量</li>
-</ol>
-<p><strong>由于Class文件中方法、字段等都需要引用CONSTANT_Utf8_info型常量来描述名称，所以CONSTANT_Utf8_info型常量的最大长度也就是Java中方法、字段名的最大长度。而这里的最大长度就是length的最大值，既u2类型能表达的最大值65535.所以Java程序中如果定义了超过65KB因为字符串的变量或方法名将会无法编译。</strong></p>
-<p>javap工具用于分析Class文件字节码的。</p>
-<h5 id="访问标志"><a href="#访问标志" class="headerlink" title="访问标志"></a>访问标志</h5><p>这个标志用于识别一些类或者是接口层次的访问信息。</p>
-<h5 id="类索引、父类索引与接口索引集合"><a href="#类索引、父类索引与接口索引集合" class="headerlink" title="类索引、父类索引与接口索引集合"></a>类索引、父类索引与接口索引集合</h5><p>Class文件中由这三项数据来确定这个类的继承关系。</p>
-<h5 id="字段表集合"><a href="#字段表集合" class="headerlink" title="字段表集合"></a>字段表集合</h5><p>字段表用于描述接口库或者类中声明的变量。</p>
-<p>字段包括类级变量以及实例级变量，但不包括在方法内部声明的局部变量。</p>
-<p>字段表集合中不会列出从超类或者父类接口中继承而来的字段，但有可能列出原本Java代码中不存在的字段。对于字节码来说，如果两个字段的描述符不一致，那字段重名就是合法的。</p>
-<h5 id="方发表集合"><a href="#方发表集合" class="headerlink" title="方发表集合"></a>方发表集合</h5><p>volatile关键字和transient关键字不能修饰方法，所以方发表的访问标志中没有了ACC_VOLATITE标志和ACC_TRANSIENT标志。</p>
-<h5 id="属性表集合"><a href="#属性表集合" class="headerlink" title="属性表集合"></a>属性表集合</h5><p>在Class文件、字段表、方发表都可以携带自己的属性表集合，以用于描述某些场景专有的信息。<br>操作栈数？<br>max_stack代表了操作数栈深度的最大值。在方法执行的任意时刻，操作栈数都不会超过这个深度。虚拟机运行的时候需要根据这个值来分配栈帧中的操作栈深度。</p>
-<h6 id="1-Code属性"><a href="#1-Code属性" class="headerlink" title="1 Code属性"></a>1 Code属性</h6><p>了解Code属性是学习后面关于字节码执行引擎内容的必要基础，能直接阅读字节码也是工作中分析Java代码语义问题的必要工具和基本技能。 </p>
-<p>使用Javap 命令计算字节码指令： javap -verbose TestClass</p>
-<p>在实例方法的局部变量表中至少会存在一个指向当前对象实例的局部变量，局部变量表中也会预留第一个Slot位来存放对象实例的引用，方法参数值从1开始计算。，这个处理只对实例方法有效。</p>
-<h6 id="2-Exceptions属性"><a href="#2-Exceptions属性" class="headerlink" title="2 Exceptions属性"></a>2 Exceptions属性</h6><p>Exceptions属性的作用是列举出方法中可能抛出的受检查异常(Checked Exceptions)，也就是方法描述时在throws关键字后面列举的异常。</p>
-<h6 id="3-LineNumberTable属性"><a href="#3-LineNumberTable属性" class="headerlink" title="3 LineNumberTable属性"></a>3 LineNumberTable属性</h6><p>LineNumberTable属性用于描述Java源码行号与字节码行号之间的对应关系。 </p>
-<h6 id="4-LocalVariableTable属性"><a href="#4-LocalVariableTable属性" class="headerlink" title="4 LocalVariableTable属性"></a>4 LocalVariableTable属性</h6><p>LocalVariableTable属性用于描述栈帧中局部变量表中的变量与Java源码中定义的变量之间的关系</p>
-<h6 id="5-SourceFile属性"><a href="#5-SourceFile属性" class="headerlink" title="5 SourceFile属性"></a>5 SourceFile属性</h6><p>SourceFile属性用于记录生成这个Class文件的源码文件名称。</p>
-<h6 id="6-ConstantValue属性"><a href="#6-ConstantValue属性" class="headerlink" title="6 ConstantValue属性"></a>6 ConstantValue属性</h6><p>ConstantValue属性的作用是通知虚拟机自动为静态变量赋值。onstantValue的属性值只能限于基本类型和String。</p>
-<h6 id="7-InnerClasses属性"><a href="#7-InnerClasses属性" class="headerlink" title="7 InnerClasses属性"></a>7 InnerClasses属性</h6><p>InnerClasses属性用于记录内部类与宿主类之间的关联。</p>
-<h6 id="8-Deprecated及Synthetic属性"><a href="#8-Deprecated及Synthetic属性" class="headerlink" title="8 Deprecated及Synthetic属性"></a>8 Deprecated及Synthetic属性</h6><h6 id="9-StackMapTable属性"><a href="#9-StackMapTable属性" class="headerlink" title="9 StackMapTable属性"></a>9 StackMapTable属性</h6><h6 id="10-Signature"><a href="#10-Signature" class="headerlink" title="10 Signature"></a>10 Signature</h6><h6 id="11-BootstrapMethods属性"><a href="#11-BootstrapMethods属性" class="headerlink" title="11 BootstrapMethods属性"></a>11 BootstrapMethods属性</h6><h5 id="字节码指令简介"><a href="#字节码指令简介" class="headerlink" title="字节码指令简介"></a>字节码指令简介</h5><p>Java虚拟机的指令由一个字节长度、代表着某种特定操作含义的数字（称为操作码，Opcode）以及跟随其后的零至多个代表此操作所需参数（称为操作数，Operands）而构成。</p>
-<h6 id="1-字节码与数据结构"><a href="#1-字节码与数据结构" class="headerlink" title="1 字节码与数据结构"></a>1 字节码与数据结构</h6><p>阅读字节码作为了解Java虚拟机的基础技能，是一项应当熟练掌握的能力。</p>
-<h6 id="2-加载和存储指令"><a href="#2-加载和存储指令" class="headerlink" title="2 加载和存储指令"></a>2 加载和存储指令</h6><p>加载和存储指令用于将数据在栈帧中的局部变量表和操作数栈之间来回传输。</p>
-<h6 id="3-运算指令"><a href="#3-运算指令" class="headerlink" title="3 运算指令"></a>3 运算指令</h6><p>运算指令用于对两个操作数栈上的值进行某种特定运算，并把结果重新存入到操作栈顶。</p>
-<p>算术指令分为两种：</p>
-<ol>
-<li>对整型数据进行运算的指令。</li>
-<li>对浮点型数据进行运算的指令。</li>
-</ol>
-<p>无论哪种算术指令，都使用Java虚拟机的数据类型，由于没有直接支持byte，short，char和boolean类型的算术指令，对于这类数据的运算，应使用操作int类型的指令代替。</p>
-<h6 id="4-类型转换指令"><a href="#4-类型转换指令" class="headerlink" title="4 类型转换指令"></a>4 类型转换指令</h6><h6 id="5-对象创建与访问指令"><a href="#5-对象创建与访问指令" class="headerlink" title="5 对象创建与访问指令"></a>5 对象创建与访问指令</h6><h6 id="6-操作数栈管理指令"><a href="#6-操作数栈管理指令" class="headerlink" title="6 操作数栈管理指令"></a>6 操作数栈管理指令</h6><p>操作数栈的指令：</p>
-<ol>
-<li>将操作数栈的栈顶一个或两个元素出栈：pop、pop2。</li>
-<li>复制栈顶一个或两个数值并将复制值或双份的复制值重新压入栈顶：dup、dup2、dup_x1、dup_x2、dup2_x2。</li>
-<li>将栈最顶端的两个数值互换：swap。</li>
-</ol>
-<h6 id="7-控制转移指令"><a href="#7-控制转移指令" class="headerlink" title="7 控制转移指令"></a>7 控制转移指令</h6><h6 id="8-方法调用和返回指令"><a href="#8-方法调用和返回指令" class="headerlink" title="8 方法调用和返回指令"></a>8 方法调用和返回指令</h6><h6 id="9-异常处理指令"><a href="#9-异常处理指令" class="headerlink" title="9 异常处理指令"></a>9 异常处理指令</h6><h6 id="10-同步指令"><a href="#10-同步指令" class="headerlink" title="10 同步指令"></a>10 同步指令</h6><h5 id="共有设计和私有设计"><a href="#共有设计和私有设计" class="headerlink" title="共有设计和私有设计"></a>共有设计和私有设计</h5>]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第5章 调优案例分析与实战]]></title>
-      <url>/2017/10/30/%E7%AC%AC5%E7%AB%A0-%E8%B0%83%E4%BC%98%E6%A1%88%E4%BE%8B%E5%88%86%E6%9E%90%E4%B8%8E%E5%AE%9E%E6%88%98/</url>
-      <content type="html"><![CDATA[<h4 id="高性能硬件上的程序部署策"><a href="#高性能硬件上的程序部署策" class="headerlink" title="高性能硬件上的程序部署策"></a>高性能硬件上的程序部署策</h4><p>三大块非用户程序时间：</p>
-<ol>
-<li>编译时间</li>
-<li>垃圾收集时间</li>
-<li>GC时间<ol>
-<li>新生代minor GC</li>
-<li>老年代Full GC<br>编译时间是指虚拟机的JIT编译器编译热点代码的耗时。Java的运行时编译最大的缺点就是它进行编译需要消耗程序正常的运行时间。</li>
-</ol>
-</li>
-</ol>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第4章 虚拟机性能监控与故障处理工具]]></title>
-      <url>/2017/10/30/%E7%AC%AC4%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%80%A7%E8%83%BD%E7%9B%91%E6%8E%A7%E4%B8%8E%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/</url>
-      <content type="html"><![CDATA[<h4 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h4><p>给定一个系统定位问题的时候，只是、经验是关键基础，数据时依据，工具是运用知识处理数据的手段。这里说的数据包括：运行日志、异常对战、GC日志、线程快照（threaddump/jvacore文件）、堆转存储快照（headdump/hprof文件）等。</p>
-<p>JDK的命令行工具</p>
-<p>解决liunx下jstat无法查看虚拟机状态的问题：<a href="http://www.cnblogs.com/saias/p/6874202.html" target="_blank" rel="external">连接</a>。</p>
-<p>启动后,这时候使用jstat查看该tomcat的状态提示pid not found,使用jps也没有这条信息,但是ps查看明明就有,顿时感觉很坑爹.<br>一顿查找资料后,逐步解决.<br>首先java进程会向/tmp里写文件,路径为hsperfdata<em>$user/$pid,如果在tmp下没有这个文件jps就会查找不到这个线程.如果tmp下的java临时文件有误就会提示xx – process information unavailable,<br>这时候把tmp下hsperfdata</em>这样的都删了,然后重启java程序,再使用<strong>jps</strong>就能正常输出结果了.</p>
-<p>然后tomcat的catalina.sh里开头设置CATALINA_TMPDIR=/tmp,这样下面的脚本执行-Djava.io.tmpdir=\”$CATALINA_TMPDIR\” \,这样就可以达到效果是加上java参数-Djava.io.tmpdir=/tmp.<br>这时候重启tomcat后,输入jstat -gcutil pid,就可以显示jvm的情况了</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第3章 垃圾收集器与内存分配策略]]></title>
-      <url>/2017/10/30/%E7%AC%AC3%E7%AB%A0-%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E4%B8%8E%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5/</url>
-      <content type="html"><![CDATA[<h4 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h4><ol>
-<li>每个栈中的栈帧随着方法的进入和退出而有条不紊地执行着出栈和入栈操作，每一个栈帧中分配多少内存基本上是在类结构确定下来是就已知的。</li>
-<li>程序计数器、虚拟机栈、本地方法栈这几个区域的内存分配和回收都具备确定性，不需要过多考虑回收的问题，因为方法结束或者线程结束时，内存自然就跟着回收了。而java堆和方法区则不一样。</li>
-</ol>
-<h4 id="对象已死吗"><a href="#对象已死吗" class="headerlink" title="对象已死吗"></a>对象已死吗</h4><h5 id="Java堆回收"><a href="#Java堆回收" class="headerlink" title="Java堆回收"></a>Java堆回收</h5><ol>
-<li>主流的java虚拟机里面没有选用引用计数器算法来管理内存，其中最主要的原因是它很难解决对象之间互相循环引用的问题。</li>
-<li>通过可达性分析算法来判定对象是否存活着，算法思路：通过一系列的称为“GC Roots”的对象作为起始点，从这些节点开始向下搜索，搜索所走过的路径称为引用链（Reference Chain），当一个对象到GC Roots没有任何引用链相连时，则证明此对象是不可用的。</li>
-<li>可作为GC Roots的对象包括下面几种:<ol>
-<li>虚拟机栈（栈帧中的本地变量表）中引用的对象。</li>
-<li>方法区中类静态属性引用的对象</li>
-<li>方法区中常量引用的对象</li>
-<li>本地方法栈中JNI引用的对象</li>
-</ol>
-</li>
-<li>java将引用分为强引用、软引用、弱引用、虚引用，引用强度逐渐减弱。</li>
-<li>可达性分析算法中不可达的对象，也并非是“非死不可”的，这时候它们暂时处于“缓刑”阶段，要真正宣告一个对象死亡，至少要经历两次标记过程。</li>
-<li>finalize()方法中对象逃脱死亡命运的最后一次机会。</li>
-<li>任何一个对象的finalize()方法都只会被系统自动调用一次，如果对象面临下一次回收，它的finalize()方法不会再次被执行。尽量避免使用它。</li>
-</ol>
-<a id="more"></a>
-<h5 id="方法区回收"><a href="#方法区回收" class="headerlink" title="方法区回收"></a>方法区回收</h5><ol>
-<li>Java虚拟机规范中确实说过可以不要求虚拟机在方法区(永久代)实现垃圾收集。</li>
-<li>永久代的垃圾回收主要回收两部分内容：废弃产量和无用的类。</li>
-<li>无用的类：<ol>
-<li>该类所有的实例都已经被回收，也就是Java堆中不存在该类的任何引用。</li>
-<li>加载该类的ClassLoader已经被回收。</li>
-<li>该类对用的java.lang.Class对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。</li>
-</ol>
-</li>
-</ol>
-<h5 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h5><ol>
-<li>什么是新生代、永久代、老年代</li>
-</ol>
-<h5 id="HotSpot的算法实现"><a href="#HotSpot的算法实现" class="headerlink" title="HotSpot的算法实现"></a>HotSpot的算法实现</h5><p>以下是介绍如何发起内存回收，还没回收：</p>
-<ol>
-<li>枚举根节点；</li>
-<li>安全点中断方式：抢先式中断、主动式中断，几乎没有虚拟机采用抢先式中断；</li>
-<li>安全区域：解决了“不执行的线程”无法到达安全点的问题。安全区域是指在一段代码片段之中，引用关系不会发生变化。</li>
-</ol>
-<h5 id="垃圾收集器（真正回收）"><a href="#垃圾收集器（真正回收）" class="headerlink" title="垃圾收集器（真正回收）"></a>垃圾收集器（真正回收）</h5><p>真正回收垃圾</p>
-<ol>
-<li>Serial收集器（新生代收集器，client模式下是很好的选择，单CPU下效果好）</li>
-<li>ParNew收集器：Serial多线程版本（Server模式下首选新生代收集器）</li>
-<li>Parallel Scavenge收集器（新生代）：吞吐量优先的收集器</li>
-<li>Serial Old收集器（老年代）</li>
-<li>CMS收集器（老年代）：以获取最短回收停顿时间为目标的收集器。步骤：<ol>
-<li>初始标志</li>
-<li>并发标志</li>
-<li>重新标志</li>
-<li>并发清除</li>
-</ol>
-</li>
-<li><p>G1收集器（新生代、老年代），优点：</p>
-<ol>
-<li>并行与并发</li>
-<li>分代收集（新生代、老年代）</li>
-<li>空间整合（整体：标记-整理实现，局部复制算法实现）</li>
-<li><p>可预测的停顿</p>
-<p>步骤：</p>
-</li>
-<li><p>初始标记</p>
-</li>
-<li>并发标记</li>
-<li>最终标记</li>
-<li>筛选回收</li>
-</ol>
-</li>
-</ol>
-<h5 id="理解GC日志"><a href="#理解GC日志" class="headerlink" title="理解GC日志"></a>理解GC日志</h5><p>阅读GC日志是处理Java虚拟机内存问题的基础技能。</p>
-<h4 id="内存分配与回收策略"><a href="#内存分配与回收策略" class="headerlink" title="内存分配与回收策略"></a>内存分配与回收策略</h4><p>给对象分配内存，对象主要分配在新生代的Eden区上，如果启动了本地线程分配缓冲，将按线程优先在TLAB上分配。</p>
-<p>几条最普遍的内存分配规则</p>
-<ol>
-<li>对象优先在Eden分配，-Xmn10M表示10M分配给了新生代；-XX:SurvivorRatio=8决定了新生代中Eden区与一个Survivor区的空间比例是8:1.</li>
-<li>Minor GC和Full GC有什么不一样吗？</li>
-</ol>
-<h4 id="大对象直接进入老年代"><a href="#大对象直接进入老年代" class="headerlink" title="大对象直接进入老年代"></a>大对象直接进入老年代</h4><p>最典型的大对象就是那种很长的字符串以及数组。虚拟机提供了一个-XX:PretenureSizeThreshold参数，令大于这个设置值的对象直接在老年代分配。</p>
-<h4 id="长期存活的对象将进入老年代"><a href="#长期存活的对象将进入老年代" class="headerlink" title="长期存活的对象将进入老年代"></a>长期存活的对象将进入老年代</h4><ol>
-<li>对象晋升老年代的年龄阈值，可以通过参数：-XX:MaxTenuringThreshold设置。</li>
-<li>1 对象优先在Eden中分配，当Eden中没有足够的空间分配时会促发一次Minor GC。每次Minor GC结束后，Eden区会清空，因为它会把Eden中还依然存活的对象放到Survivor中，当Survivor中放不下时，则由分派担保进入老年代中。2 大对象直接进入老年代中。-XX:+PretenuerSizeThreshold 控制”大对象的“的大小。即当创建的对象大于这个临界值时，则该对象直接进入老年代。3 长期存活的对象将进入老年代。虚拟机对每个对象定义了一个对象年龄（Age）计数器。当年龄增加到一定的临界值时，就会晋升到老年代中，该临界值由参数：-XX:MaxTenuringThreshold来设置。如果对象在Eden出生并在第一次发生Minor GC时仍然存活，并且能够被Survivor中所容纳的话，则该对象会被移动到Survivor中，并且设Age=1；以后每经历一次Minor GC，该对象还存活的话会被移动到另一个Survivor区中，并且Age=Age+1。4 动态对象年龄判定：如上所示，虚拟机并不总是要求对象的年龄必须达到MaxTenuringThreshold才能晋升到老年代，如果在Survivor区中相同年龄（设年龄为age）的对象的所有大小之和超过Survivor空间的一半，年龄大于或等于该年龄（age）的对象就可以直接进入老年代，无需等到MaxTenuringThreshold中要求的年龄。</li>
-</ol>
-<h4 id="动态对象年龄判定"><a href="#动态对象年龄判定" class="headerlink" title="动态对象年龄判定"></a>动态对象年龄判定</h4><p>如果在Survivor空间中相同年龄所有对象大小的总和大于Survivor空间的一半，年龄大于或等于该年龄的对象就可以直接进入老年代，无须等到MaxTenuringThreshold中要求的年龄。</p>
-<h4 id="空间分配担保"><a href="#空间分配担保" class="headerlink" title="空间分配担保"></a>空间分配担保</h4><p>每一次回收晋升到老年代对象容量的平均大小值最为经验值，与老年代的剩余空间进行比较，决定是否进行Full GC来让老年代腾出更多的空间。老年代空间不足会出现担保失败。</p>
-<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>内存回收与垃圾收集器在很多时候都是影响系统性能、并发能力的主要因素之一，虚拟机之所以提供多种不同的收集器以及提供大量的调节参数，是因为只有根据实际应用需求、实现方式选择最优的收集方式才能获取最高的性能。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第2章 Java内存区域与内存溢出异常]]></title>
-      <url>/2017/10/30/%E7%AC%AC2%E7%AB%A0-Java%E5%86%85%E5%AD%98%E5%8C%BA%E5%9F%9F%E4%B8%8E%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%BC%82%E5%B8%B8/</url>
-      <content type="html"><![CDATA[<h4 id="计数器"><a href="#计数器" class="headerlink" title="计数器"></a>计数器</h4><ol>
-<li>字节码解释器工作时通过改变计数器的值来选取下一条需要执行的字节码指令。</li>
-<li>每个线程有独立的计数器。</li>
-<li>如果正在执行的是Native方法，这个计数器值为空（Undefined)。</li>
-<li>计数器的内存区域是唯一一个在Java虚拟机规范中没有规定任何OutOfMemoryError情况的区域。</li>
-</ol>
-<h4 id="虚拟机栈"><a href="#虚拟机栈" class="headerlink" title="虚拟机栈"></a>虚拟机栈</h4><ol>
-<li>与计数器一样，虚拟机栈也是线程私有的，生命周期与线程相同。</li>
-<li>描述的是Java方法执行的内存模型</li>
-<li>栈帧是方法运行时的基础数据结构。</li>
-<li>Java虚拟机规范对这个区域规定了两种异常情况：如果线程请求的栈深度大于虚拟机所允许的深度，将抛出StackOverflowError异常；如果虚拟机栈可以动态扩展，扩展时无法申请到足够的内存，就会抛出OutOfMemoryError异常。<h4 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h4></li>
-<li>为虚拟机使用到的Native方法服务。</li>
-<li>本地方法栈也会抛出StackOverflowError和OutOfMemory异常。</li>
-<li>与虚拟机栈的作用相似。</li>
-</ol>
-<h4 id="Java堆"><a href="#Java堆" class="headerlink" title="Java堆"></a>Java堆</h4><ol>
-<li>Java堆是被所有线程共享的一块内存区域，在虚拟机启动时创建。以为目的是存放对象实例。</li>
-<li>是垃圾收集器管理的主要区域。</li>
-<li>堆中没有内存完成实例分配，并且堆也无法再扩展时，将会抛出OutOfMemoryError异常。</li>
-</ol>
-<h4 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h4><ol>
-<li>也是各个线程共享的内存区域，用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。</li>
-<li>除了和java堆一样不需要连续的内存和可以选择规定大小或者可扩展外，还可以选择不实现垃圾收集。</li>
-<li>这区域的内存回收目标主要是针对常量池的回收和对类型的卸载。</li>
-<li>无法满足内存分配的需求时，将会抛出OutOfMemoryError异常。</li>
-</ol>
-<h4 id="运行时常量池"><a href="#运行时常量池" class="headerlink" title="运行时常量池"></a>运行时常量池</h4><ol>
-<li>是方法区一部分。</li>
-<li>常量池用于存放编译器生成的各种字面量和符号引用，这部分内容将在类加载后进入方法区的运行时常量池存放。</li>
-</ol>
-<h4 id="直接内存"><a href="#直接内存" class="headerlink" title="直接内存"></a>直接内存</h4><ol>
-<li>NIO</li>
-</ol>
-<h4 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h4><ol>
-<li>对象在堆上的内存分配方式分为指针碰撞和空闲列表。</li>
-<li>对象内存空间分配完成后，内存空间都初始化为零值。</li>
-</ol>
-<h4 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h4><ol>
-<li>在内存中的布局分为3块区域：对象头、实例数据、对齐填充</li>
-</ol>
-<h4 id="对象的定位"><a href="#对象的定位" class="headerlink" title="对象的定位"></a>对象的定位</h4><ol>
-<li>通过栈上的reference数据来操作堆上的具体数据。</li>
-<li>目前主流的访问方式有使用句柄和直接指针两种。</li>
-</ol>
-<h4 id="排错"><a href="#排错" class="headerlink" title="排错"></a>排错</h4><ol>
-<li>注意区分是内存泄露(Memory Leak)，还是内存溢出(Memory Overflow)</li>
-<li>使用Eclipse Memory Analyzer进行分析，安装教程：<a href="http://www.jianshu.com/p/3b3c3a914724" target="_blank" rel="external">http://www.jianshu.com/p/3b3c3a914724</a></li>
-</ol>
-<h5 id="堆溢出"><a href="#堆溢出" class="headerlink" title="堆溢出"></a>堆溢出</h5><ol>
-<li>堆空间中的每个对象都是由一个根元素为起点被层层调用的。因此，一个对象还被某一个存活的根元素所引用，就会被认为是存活对象，不能被回收，进行内存释放。因此，我们可以通过分析一个对象到根元素的引用路径来分析为什么该对象不能被顺利回收。如果说一个对象已经不被任何程序逻辑所需要但是还存在被根元素引用的情况，我们可以说这里存在内存泄露。</li>
-<li>-Xmx20m -Xms20m 设置堆的最大最小；-Xss128k 设置虚拟机栈的大小；-Xoss设置本地方法栈大小；MaxPermSize(最大方法区容量)</li>
-</ol>
-<h5 id="虚拟机栈和本地方法栈溢出"><a href="#虚拟机栈和本地方法栈溢出" class="headerlink" title="虚拟机栈和本地方法栈溢出"></a>虚拟机栈和本地方法栈溢出</h5><ol>
-<li>如果线程请求的栈深度大于虚拟机所允许的最大深度，将抛出StackOverflow异常（栈溢出）；如果虚拟机在扩展栈时无法申请到足够的内存空间，则将抛出OutOfMemoryError异常（内存泄露）。</li>
-<li>为了防止多线程导致的内存溢出，要注意控制虚拟机栈和本地方法栈的大小。</li>
-</ol>
-<h5 id="方法区和运行时常量池溢出"><a href="#方法区和运行时常量池溢出" class="headerlink" title="方法区和运行时常量池溢出"></a>方法区和运行时常量池溢出</h5><p>运行时常量区是方法区的一部分。</p>
-<ol>
-<li>String.intern()方法在JDK1.7之后的改变，注意“首次出现原则”。</li>
-</ol>
-<h5 id="本机直接内存溢出"><a href="#本机直接内存溢出" class="headerlink" title="本机直接内存溢出"></a>本机直接内存溢出</h5><ol>
-<li>DirectMemory容量可通过 -XX: MaxDirectMemorySize指定，如果不指定则默认与Java堆最大值（-Xmx指定）一样。</li>
-<li>由DirectMemory导致的内存溢出，一个明显的特征是在Heap Dump文件中是不会看见明显的异常，如果读者返现OOM之后Dump文件很小，而程序中有直接或间接使用了NIO，那就可以考虑检查一下是不是这方面的原因。</li>
-</ol>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第1章 走进Java]]></title>
-      <url>/2017/10/30/%E7%AC%AC1%E7%AB%A0-%E8%B5%B0%E8%BF%9BJava/</url>
-      <content type="html"><![CDATA[<h3 id="java优点"><a href="#java优点" class="headerlink" title="java优点"></a>java优点</h3><ol>
-<li>摆脱平台束缚；</li>
-<li>提供一个相对安全的内存管理和访问机制，避免了绝大部分的内存泄露和指针越界问题</li>
-<li>实现了热点代码监测和运行时编译及优化</li>
-<li>有一套完善的应用程序接口，还有无数来自商业机构和开源社区的第三方类库来帮助它实现各种各样的功能</li>
-</ol>
-<a id="more"></a>
-<h3 id="java技术体系"><a href="#java技术体系" class="headerlink" title="java技术体系"></a>java技术体系</h3><p><em>Java程序设计语言、Java虚拟机、Java API类库这三部分统称为JDK，JDK是用于支持Java程序开发的最小环境</em></p>
-<p><em>Java类库中的Java SE API子集和Java虚拟机这两部分统称为JRE，JRE是支持Java程序运行的标准环境。</em></p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[我的第一篇博客]]></title>
-      <url>/2017/10/30/%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E5%8D%9A%E5%AE%A2/</url>
-      <content type="html"><![CDATA[<p>首先要纪念一下，这是我第一次写博客，这也是我的第一篇博文。我希望以后几年，十几年，几十年都能够坚持写下去，与大家分享生活与工作中一切好的东西！</p>
-<a id="more"></a>
-<p>我一直都想把工作和生活中的点点滴滴以博文的方式跟大家分享，但是一直都没有付诸行动（其实就是懒），直到前段时间跟同一年以应届生身份进公司的同事聊天时才知道他一直在坚持写博客，他向我推荐了他的博客，还告诉我怎么去搭建博客站点（这里要感谢github），这才完全激起了我的兴趣。当然我不希望自己只有三分钟热度，我希望自己能够一直写下去。</p>
-<p>当然，不只是一时兴起，我打算写博客还基于几个原因：</p>
-<ol>
-<li>我一直是分享的受益者，这些年通过大家的分享帮助我解决了很多问题，因此，我希望尽最大努力回馈大家；</li>
-<li>将工作中遇到的一些坑或是解决的某些技术问题做一个总结，以备后期查阅；</li>
-<li>记录技术与生活相关的学习笔记，展示自己的技术栈，督促自己必须不断地学习；</li>
-<li>写一些生活感想，记录一些生活的美好瞬间；</li>
-</ol>
-<p>加油吧，少年！（嘿嘿）</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 生活 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> 感想 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-  
-  
+<search>
+  <entry>
+    <title><![CDATA[使用easyUI组件combogrid面板相关问题]]></title>
+    <url>%2F2017%2F11%2F15%2F%E4%BD%BF%E7%94%A8easyUI%E7%BB%84%E4%BB%B6combogrid%E9%9D%A2%E6%9D%BF%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98%2F</url>
+    <content type="text"><![CDATA[问题使用combogrid组件时，弹出的面板宽度总是与数据框的长度一样，并不是想官方demo那样弹出理想的宽度。各种属性各种设置也没解决问题，网上找了好久也没有找到答案。 解决后来继续翻官方demo，发现了一个属性，试了一下成功了。属性如下：1panelMinWidth : &apos;50%&apos;, 设置值为：50%。 下来面板中加入输入框因为combogrid继承combo以及datagrid，因此可是使用combo以及datagrid的特性。通过”toolbar”属性可以引入输入框形成组合查询。 注意问题：在Firefox浏览器中可能会出现数据框加载显示效果问题，可以先默认隐藏输入框，再在列表初始化函数中通过js显示该输入框。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>前端</category>
+        <category>js</category>
+        <category>EasyUI</category>
+        <category>Combo</category>
+        <category>Datagrid</category>
+        <category>Combogrid</category>
+        <category>问题</category>
+      </categories>
+      <tags>
+        <tag>js</tag>
+        <tag>EasyUI</tag>
+        <tag>Combo</tag>
+        <tag>Datagrid</tag>
+        <tag>Combogrid</tag>
+        <tag>问题</tag>
+        <tag>前端</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[记一次tomcat崩溃问题排查过程]]></title>
+    <url>%2F2017%2F11%2F10%2F%E8%AE%B0%E4%B8%80%E6%AC%A1tomcat%E5%B4%A9%E6%BA%83%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B%2F</url>
+    <content type="text"><![CDATA[产品在生产环境中跑了一段时间后，每天早晨运维人员都会发现程序崩溃，无法提供服务，重启之后就好了，而且白天都没问题，运维人员因此叫苦连天。 查看日志发现有堆内存溢出的提示，并且都是发生在凌晨一点钟左右，但找不到是哪个线程导致的，重启之后通过jstack、jmap、jstat等命令查看各项指标都正常。无奈只能在catalina.sh配置文件中加入JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/.../oom.hprof&quot;配置项，当程序因为内存溢出崩溃时能够查看当时的jvm内存使用情况。 隔天早上再次发生崩溃，产生了oom.hprof文件，让运维人员传过来，导入MemoryAnalyzer中进行分析。分析过程中发现某个定时任务的线程对象占用了将近一半的堆内存，并且对象类型为： 1234567891011121314151617181920212223242526272829303132333435363738394041java.lang.Object[4102267] @ 0xe817b3f0 16,409,088 864,074,952 48.56% ..+com.mysql.jdbc.ByteArrayRow @ 0xb0176c20 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xe3044560 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xce6ac738 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xaf2ab198 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xa82fbcc0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xcbce65f8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb1b9e200 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb515f4a0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xde9fab68 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xac3662a8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xd3b9e6f8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xe3044690 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xa51149a8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xafc57d70 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0x8f536ab0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xd6bb6588 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb0d39428 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0x98c5da88 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb2de5950 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xde9fac98 通过在网上搜索答案，初步猜测是一次从数据库中读取了大量的数据到内存中导致内存溢出的崩溃问题。接着查看线程栈，定位到了线程中导致问题的某一处代码。 这一处代码做的是一个根据条件定期删除数据库的操作，这是经过本地调试发现每次做删除操作时并没有报异常，但也没删除成功。此时可以了解了问题发生的原因，由于此每次都没能成功删除数据，但是还会有新数据不断加入，日积月累数据量会越来越庞大。每次做删除操作时JPA预先加载所有要删除的数据到内存中，这时大数据量会导致JVM实例堆溢出崩溃。 定位到问题代码之后要分析一下为什么没有成功删除数据。这里要先说一下，我们项目中使用的是spring boot，持久层api使用的是spring data jpa。通过分析发现代码中没有在service层的实现类或是相关方法上加@transactional，导致的删除数据时事务不生效。 但是当我给service层实现类加上@transactional时，删除数据仍然不成功，分析代码发现，他这个service层实现类不但有implements接口，还extends抽象类，并不是纯碎的接口实现，即使直接加在方法上也不行，为什么不成功我暂时还没有时间去研究。无奈只能在repository层加，操作才成功，显然这种方法很不好！没办法，先交给代码关系人来解决吧，我也没时间和精力！]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>问题排查</tag>
+        <tag>OutOfMemoryError</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Java应用排查笔记]]></title>
+    <url>%2F2017%2F11%2F07%2FJava%E5%BA%94%E7%94%A8%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E7%AC%94%E8%AE%B0%2F</url>
+    <content type="text"><![CDATA[前一段时间跑在tomcat的java应用出现线程挂掉，CPU占用率持续过高，堆溢出的问题。首先说一下这件事的经过。 我在我的模块中有两个定时任务，使用的是spring boot的注解@Scheduled(fixedDelay=ONE_Minute)，后来出现这了两个定时任务都不再往redis缓存里面存放数据的问题。一开始没有经验，也没有打印足够的日志，所以从日志里面也看不出啥问题。 后来，我去除掉了定时任务，改成了直接new线程的方式（这种方式当然不好），并且详细打上了日志。但又出现问题了，但可喜的是这两个线程中只有一个不工作了（就是不缓存数据了，具体问题也不清楚），另外一个还很正常。这种情况出现了2到3次，我这时候还是束手无策，不知为何？ 我继续在网上搜索答案，说是用jps,jstat,jinfo,jmap,jhat,jstack这些命令可以做故障分析。下面是使用的过程。 首相使用jps查询运行tomcat的JVM虚拟机的进程： 1jps 得到一下结果： 122667 Bootstrap3116 Jps 其中Bootstrap代表的2667就是tomcat java虚拟机的进程号。有时候使用jps命令无法得到类似2667 Bootstrap的结果(好像重启tomcat之后好使)，那么可用ps -ef | grep tomcat得到进程号。 判断线程状态首先通过jstack -l pid来查看所有的线程栈,若果调用失败可使用stack -F pid强制导出。通过导出的线程堆栈信息来判断线程的状态，是否还存在？如果存在的话，处于什么状态？ 判断Java进程为何CPU占用率高可通过ps -Lfp pid或者ps -mp pid -o THREAD, tid, time或者top -Hp pid来判断java进程中哪个线程的CPU占用过高。 确定了线程的id之后，再通过jstack -l pid打印出的信息查看对应的线程的堆栈，确认线程的工作状态。参考链接：https://my.oschina.net/feichexia/blog/196575 判断OutOfMemoryError问题当发生OutOfMemoryError时希望把当时的内存数据保存下来以便于使用可视化工具（eclipse memory analyzer ）分析，可以在tomcat bin下的catalina.sh文件中加入相关参数。添加位置如下： 12345678fi# ----- Execute The Requested Command -----------------------------------------JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/cloudview/data/dump/oom.hprof&quot;# Bugzilla 37848: only output this if we have a TTYif [ $have_tty -eq 1 ]; then -XX:HeapDumpPath=/cloudview/data/dump/oom.hprof表示文件保存的路径以格式。 发生OutOfMemoryError可能会导致线程异常终止，可用catch Throwable捕捉并打印最后的堆栈信息。另外不建议单独使用new线程的方式，可使用线程池来保证重启线程。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>问题排查</tag>
+        <tag>OutOfMemoryError</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第13章 线程安全与锁优化]]></title>
+    <url>%2F2017%2F11%2F04%2F%E7%AC%AC13%E7%AB%A0-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E4%B8%8E%E9%94%81%E4%BC%98%E5%8C%96%2F</url>
+    <content type="text"><![CDATA[线程安全Java语言中的线程安全我们可以将java语言中各种操作共享的数据分为以下5类： 不可变：1 final关键字修饰的变量（没有发生this引用逃逸的情况）；2 Java.lang.String类的对象，调用它的方法是只会返回一个新构造的字符串对象；3 枚举类型；4 Long和Double等数值包装类型； 绝对线程安全：Java API中标注自己是线程安全的类，大多数都不是绝对的线程安全； 相对线程安全：相对的线程安全就是我们通常意义上所讲的线程安全，它需要保证对这个对象单独的操作是线程安全的。Vector、HashTable、Collections的synchronizedCollection()方法包装的集合等都属于这种类型； 线程兼容； 线程对立； 线程安全的实现方法1. 互斥同步Java中，最基本的互斥同步手段就是synchronized关键字。首先synchronized同步块对同一条线程来说是可以重入的，不会出现自己把自己锁死的问题；其次，同步块在已进入的线程执行完之前，会阻塞后面其他线程的进入。 除了synchronized之外，我们还可以使用java.util.concurrent包中的重入锁（ReentrantLock）来实现同步。 ReentrantLock增加的高级功能： 等待可中断 可实现公平锁 锁可以绑定多个条件 2. 非阻塞同步3. 无同步方案 可重入代码 线程本地存储 锁优化 自旋锁与自适应自旋 消除锁 锁粗化 轻量级锁 偏向锁]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第12章 Java内存模型与线程]]></title>
+    <url>%2F2017%2F11%2F04%2F%E7%AC%AC12%E7%AB%A0-Java%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%BA%BF%E7%A8%8B%2F</url>
+    <content type="text"><![CDATA[“内存模型”可以理解为在特定的操作协议下对特定的内存或高速缓存进行读写访问的过程抽象。 Java内存模型1 主内存与工作内存Java内存模型的主要目标是定义程序中各个变量的访问规则，即在虚拟机中将变量存储到内存和从内存中取出变量这样的底层细节。此处的变量与Java编程中所说的变量有所区别，它包括了实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不会被共享，自然就不会存在竞争问题。 工作过程：所有的变量都存储在主内存中。每条线程还有自己的工作内存（属于线程私有，类似处理器的高速缓存），线程的工作内存中保存了被该线程使用到的变量的主内存副本拷贝，线程对变量的所有操作都必须在工作内存中进行，而不能直接读写主内存中的变量，线程间变量值的传递均需要通过主内存来完成。 2 内存间交互操作Java内存模型中定义了一下8种操作来完成主内存和工作内存间的交互操作，虚拟机实现时必须保证下面提及的每一种操作都是原子的、不可再分的。 lock unlock read load use assign store write 3 对于volatile型变量的特殊规则在各个线程的工作内存中，volatile变量也可以存在不一致的情况，但是由于每次使用前都要先刷新，执行引擎看不到不一致的情况。 Java里面的运算并非原子操作，导致volatile变量的运算在并发下一样是不安全的。 使用volatile变量第一是保证此变量对所有线程的可见性。 volatile变量不安全场景： 多线程并发对volatile变量 i++; 由于volatile变量只能保证可见性，在不符合一下两条规则的运算场景中，我们仍然要通过加锁（使用synchronized或java.util.concurrent中的原子类）来保证原子性。 运算结果并不依赖变量的当前值，或者能够确保只有单一的线程修改变量的值； 变量不需要与其他的状态变量共同参与不变约束。 volatile适用场景： 使用volatile变量的第二个语义是禁止指令重排序优化。 选用volatile的意义：大多数场景下volatile的总开销仍然要比锁低，我们在volatile与锁之中选择的唯一依据仅仅是volatile的语义能否满足使用场景的需求。 4 对于long和double型变量的特殊规则目前各平台下的商用虚拟机几乎都选择把64位数据的读写操作作为原子操作来对待，因此我们在编写代码时一般不需要把用的long和double变量专门声明为volatile。 4 原子性、可见性与有序性原子性：由Java内存模型来直接保证的原子性操作包括read、load、assign、use、store和write，我们大致可以认为基本数据类型的访问读写是具备原子性的（long和double的非原子协定几乎不会发生例外情况） 可见性：可见性是指当一个线程修改了共享变量的值，其他线程能够立即得知这个修改。除了volatile之外，synchronized和final也能实现可见性。同步块的可见性是由“对一个变量执行unlock操作之前，必须把此变量同步回到主内存中”这条规则获得的，而final关键字的可见性是指：被final修饰的字段在构造器中一旦初始化完成，并且构造器没有把“this”的引用传递出去，那在其他线程中就能看见final字段的值。 有序性：Java语言提供了volatile和synchronized两个关键字来保证线程之间操作的有序性，volatile关键字本身就包含了禁止指令重排序的语义，而synchronized的锁操作决定了持有同一个锁的两个同步块只能串行地进入。 Java程序中天然的有序性可以总结为一句话：如果在本线程内观察，所有的操作都是有序的；如果在一个线程中观察另一个线程，所有的操作都是无序的。前半句是指“线程内表现为串行的语义”，后半句是指“指令重排序”线程和“工作内存与主内存同步延迟”现象。 6 先行发生原则Java内存模型下一些“天然的“先行发生关系，这些先行发生关系无须任何同步器协助就已经存在，可以在编码中直接使用。 程序次序规则 管道锁定规则 volatile变量规则 线程启动规则 线程终止规则 线程中断规则 对象终结规则 传递性 Java与线程java线程的实现对于Sun JDK来说，它的Windows版与Linux版都是使用一对一的线程模型实现的，一条Java线程就映射到一条轻量级进程之中。 Java线程调度调度方式有两种： 协同式线程调度 抢占式线程调度 状态转换Java定义了5中线程状态 新建（NEW） 运行（Runable）：Runable包括操作系统线程状态中的Running和Ready。 无期限等待（Waiting） 期限等待（Timed Waiting） 阻塞（Blocked） 结束（Terminated）]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Hyper-V之WMI、J-Interop]]></title>
+    <url>%2F2017%2F11%2F03%2FHyper-V%E4%B9%8BWMI%E3%80%81J-Interop%2F</url>
+    <content type="text"><![CDATA[概述经过调研发现要通过调用WMI接口来实现对Hyper-V的管理，由于之前没有相关的经验所以通过网上搜索来理解什么是WMI。 关于使用何种编程语言调用WMI，微软官网给出的是封装很友好的c#和powershell脚本接口，但目前公司的开发语言主要为Java，所以经过调研是能使用J-Interop。J-Interop是一个基于Java语言的WMI封装库，但是用方式还是太过于原始，使用上不是很友好，还得需要进一步封装，当然这一部分不在本文的编写范围内。 什么是WMI？官网介绍是： Windows Management Instrumentation (WMI) is the Microsoft implementation of Web-Based Enterprise Management (WBEM), which is an industry initiative to develop a standard technology for accessing management information in an enterprise environment. WMI uses the Common Information Model (CIM) industry standard to represent systems, applications, networks, devices, and other managed components. CIM is developed and maintained by the Distributed Management Task Force (DMTF). About WMI.aspx) 以下WMI相关的内容转载自：http://blog.csdn.net/ilovepxm/article/details/6690224 WMI的组成？严格说来，WMI由四部分组成： 公共信息模型对象管理器——CIMOM 公共信息模型——CIM WMI提供程序 WMI脚本对象库其中其第1、2、3三个部分，在使用中很少加以区别，我们一般统称为CIM库。用WMI脚本对象库访问cim库。本质：是一个带很多分支的树状数据库，是一项服务！ WMI能做什么？利用WMI可以高效地管理远程和本地的计算机.WMI是WBEM模型的一种实现。 WBEM模型最关键的部分是它的数据模型（或描述和定义对象的方式）、编码规范（Encoding Specification），以及在客户端和服务器端之间传输数据的模式。CIM即WBEM的数据模型！ CIM是一个用来命名计算机的物理和逻辑单元的标准的命名系统（或称为命名模式），例如硬盘的逻辑分区、正在运行的应用的一个实例，或者一条电缆。 WBEM模型：基于web的企业管理，为管理企业环境开发一套标准接口集。 WMI作为一种规范和基础结构，通过它可以访问、配置、管理和监视几乎所有的Windows资源，比如用户可以在远程计算机器上启动一个进程；设定一个在特定日期和时间运行的进程；远程启动计算机；获得本地或远程计算机的已安装程序列表；查询本地或远程计算机的Windows事件日志等等。 WMI通过提供一致的模型和框架，所有的 Windows 资源均被描述并公开给外界。最好的一点是，系统管理员可以使用 WMI 脚本库创建系统管理脚本，从而管理任何通过 WMI 公开的 Windows 资源！ 什么是J-Interop？官网介绍如下： j-Interop is a Java Open Source library (under LGPL) that implements the DCOM wire protocol (MSRPC) to enable development of Pure, Bi-Directional, Non-Native Java applications which can interoperate with any COM component. The implementation is itself purely in Java and does not use Java Native Interface (JNI) to provide COM access. This allows the library to be used from any Non-Windows platform. It comes with pre-implemented packages for automation. This includes support for IDispatch, ITypeInfo, and ITypeLib. For more flexibility (in the cases where automation is not supported), it provides an API set to directly invoke operations on a COM server. Another important feature is allowing full access and manipulation (C-R-U-D) of the Windows Registry in a platform independent manner.The implementation has been tested on all advanced Windows and Fedora platform(s) and displays upward compatibility from JRE 1.3.1. 通过J-Interop就可以实现对WMI的访问。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>Hyper-V</category>
+      </categories>
+      <tags>
+        <tag>Hyper-V</tag>
+        <tag>虚拟化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[在Hyper-V系列文章之前]]></title>
+    <url>%2F2017%2F11%2F03%2F%E5%9C%A8Hyper-V%E7%B3%BB%E5%88%97%E6%96%87%E7%AB%A0%E4%B9%8B%E5%89%8D%2F</url>
+    <content type="text"><![CDATA[目前正在做公司的项目就快要验收了，打算将项目中与Hyper-V相关的笔记做一个整理。项目中我们的云管平台需要接管用户的hyper-v虚拟机，能够实现对Hyper-V虚拟机的新建、删除、修改、启动、停止、web console、客户端 console等功能，由于首次接触Hyper-V相关的东西，我的Hyper-V系列文章主要记录我的一些学习过程，希望我记录的东西能够帮助到大家，因为能够完成这个项目阶段的开发也是离不开大家的帮助。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>Hyper-V</category>
+      </categories>
+      <tags>
+        <tag>Hyper-V</tag>
+        <tag>虚拟化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[git使用教程]]></title>
+    <url>%2F2017%2F11%2F03%2Fgit%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B%2F</url>
+    <content type="text"><![CDATA[打算要复习一下git的使用方法，搜了几篇不错的文章。我就不直接照搬全文了，连接如下： 比较全面的教程： Git使用教程,最详细，最傻瓜，最浅显，真正手把手教 针对几种应用场景的教程： git入门，先学会这几个姿势 常用命令详解：Git常用命令备忘，希望对学习Git的朋友们有所帮助 git进阶： 25个 Git 进阶技巧]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+        <tag>教程</tag>
+        <tag>版本控制系统</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第8章 虚拟机字节码执行引擎]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC8%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AD%97%E8%8A%82%E7%A0%81%E6%89%A7%E8%A1%8C%E5%BC%95%E6%93%8E%2F</url>
+    <content type="text"><![CDATA[在不同的虚拟机实现里面，执行引擎在执行Java代码的时候可能会有解释执行（通过解释器执行）和编译执行（通过即时编译器产生本地代码执行）两种选择，可能能两者兼备，甚至还可能会包含几个不同级别的编译器执行引擎。 运行时栈帧结构栈帧是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈的栈元素。 栈帧存储了方法的局部变量表、操作数栈、动态链接和方法返回地址等信息。 在编译程序代码的时候，栈帧中需要多大的局部变量表，多深的操作数栈都已经完全确定了，并且写入到方法表的Code属性中，因此一个栈帧需要分配多少内存，不会受到程序运行期变量数据的影响，而仅仅取决于具体的虚拟机实现。 局部变量表局部变量表是一组变量值存储空间，用于存放方法参数和方法内部定义的局部变量。 reference类型表示对一个对象实例的引用，虚拟机实现至少都应当能通过这个引用做到两点： 从此引用中直接或间接地查找到对象在Java堆中的数据存放的起始地址索引。 此引用中直接或间接地查找到对象所属数据类型在方法区中的存储的类型信息，否则无法实现Java语言规范中定义的语法约束约束。 Java语言中明确的64位的数据类型只有long和double两种。对于64位的数据类型，虚拟机会以高位对齐的方式为其分配两个连续的Slot空间。 虚拟机通过索引定位的方式使用局部变量表，索引值的范围是从0开始至局部变量表最大的Slot数量。 局部变量表中第0位索引的Slot默认是用于传递方法所属对象是的引用，在方法中可通过关键字“this”来访问到这个隐藏的参数。其余参数则按照参数表顺序排列，参数表分配完毕后，再根据方法体内部定义的变量顺序和作用与分配其余的Slot。 局部变量与类变量不一样，如果一个局部变量定义了但没有赋初始值是不能使用的，不要认为java中任何情况下都存在诸如整型变量默认为0，布尔型变量默认为false等，如以下代码 12345//未赋值的局部变量public static void main(String [] args)&#123; int a; System.out.println(a);&#125; 操作数栈（理解是充当寄存器的角色）操作数栈也常称为操作栈，它是一个后入先出栈。同局部变量表一样，操作数栈的最大深度也在编译的时候写入到Code属性的max_stacks数据项中。 操作数栈的每一个元素可以是任意的Java数据类型。32位数据类型所占的栈容量为1,64位数据类型所占的栈容量为2。 动态连接每个栈帧都包含一个指向运行时常量池中该栈帧所属方法的引用，持有这个引用是为了支持方法调用过程中的动态连接。 方法返回地址当一个方法开始执行后，只有两种方式可以退出这个方法： 正常退出 异常退出 方法推出的过程实际上就等同于把当前栈帧出栈，因此退出是可能执行的操作有： 回复上层方法的局部变量表和操作数栈； 把返回值压入调用者栈帧的操作数占中； 调整PC计数器的值以指向方法调用指令后面的一条指令等； 附加信息方法调用方法调用不等于方法执行，方法调用阶段唯一的任务就是确定被调用方法的版本，暂时还不涉及方法内部的具体运行过程。 解析所有方法调用中的目标方法在Class文件里面都是一个常量池中的符号引用，在了加载的解析阶段，会将其中的一部分符号引用转化为直接引用。 静态方法、私有方法、实例构造器、父类方法、被final修饰的方法都适合在类加载阶段进行解析，将符号引用解析为该方法的直接引用，这些方法称为非虚方法。 解析调用一定是以静态的过程，在编译期间就完全确定，在类装载的解析阶段就会把涉及的符号引用全部转变为可确定的直接引用，不会延迟到运行期再去完成。 分派分派调用过程将会揭示多态性特征的一些最基本的体现。 1 静态分派静态方法会在类加载期就进行解析，而静态方法显然也是可以拥有重载版本的，选择重载版本的而过程也是通过静态分派完成的。 2 动态分派它和多态性的另外一个重要体现—*重写有着很密切的关系。 3 单分派和多分派方法的接受者与方法的参数统称为方法的宗量，单分派是根据一个宗量对目标方法进行选择，多分派则是根据多于一个宗量对目标方法进行选择。 今天的Java语言是一门静态多分派、动态单分派的语言。 4 虚拟机动态分派的实现使用虚方法表索引来代替元数据查找以提高性能。 方法表一般在类加载的连接阶段进行初始化，准备了类的变量初始值后，虚拟机会把该类的方法表也初始化完毕。 动态类型语言支持(重要)什么是动态类型语言：动态类型语言的关键特征是它的类型检查的主题过程是在运行期而不是编译期。 与运行时异常相对应的是连接时异常，例如很常见的NoClassDefFoundError便属于连接时异常。 基于栈的字节码解释执行引擎解释执行Javac编译器代码经过词法分析、语法分析到抽象语法树，再遍历语法树生成线性的字节码指令流的过程，Java程序的编译就是半独立的实现。 基于栈的指令集与基于寄存器的指令集Java编译器输出的指令流，基本上是一种基于栈的指令集架构，指令流中的指令大比分都是零地址指令，它们依赖操作数栈进行工作。 基于栈的指令集主要的优点： 可移植； 代码相对更加紧凑 编译更加简单等 缺点： 完成相同功能需要的指令数量多。 频繁地访问内存，相对处理器来说，内存始终是执行速度额瓶颈； 基于栈的解释器执行过程]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第7章 虚拟机类加载机制]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC7%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6%2F</url>
+    <content type="text"><![CDATA[虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。 在Java语言里，类型的加载、连接和初始化都是在程序运行期间完成的。 类加载的时机类从被加载到虚拟机内存中开始，到卸载出内存为止，它的整个生命周期包括：加载、验证、准备、解析、初始化、使用和卸载。其中验证、准备、解析3个部分统称为连接。 解析阶段不一定：它在某些情况下可以在初始化阶段之后再开始，这个是为了支持Java语言的运行时绑定（也称动态绑定或晚期绑定）。 对于初始化阶段，虚拟机规范则是严格规定了有且只有5中情况必须立即对类进行“初始化”（而加载、验证、准备自然需要在此之前开始）： 遇到new、getstatic、putstatic或invokestatic这4条字节指令时，如果类没有进行过初始化，则需要先触发其初始化。 使用java。lang.reflect包的方法对类进行反射调用的时候，如果类没有进行过初始化，则需要先触发其初始化。 当初始化一个类的时候，如果发现其父类还没有进行过初始化，则需要先触发其父类的初始化。 当虚拟机启动时，用户需要制定一个要执行的主类，虚拟机会先初始化这个主类。 5 当使用JDK1.7动态语言支持是，……. 这5中场景中的行为成为对一个类进行主动引用，除此之外，所有引用类的方式都不会触发初始化，成为被动引用。 类加载过程类加载的全过程，也就是加载、验证、准备、解析和初始化这个5个阶段。 1 加载在加载阶段，虚拟机需要完成一下3件事情： 通过一个类的全限定名来获取定义此类的二进制字节流。 将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构。 在内存中生成一个代表这个类的java.lang.Class对象，作为方法区这个类的各种数据的访问入口，对于HotSpot虚拟机而言，Class对象比较特殊，它虽然是对象，但是存放在方法区里面。 数组类本身不通过类加载器创建，它是由Java虚拟机直接创建的。 2 验证验证是连接阶段的第一步，目的是为了确保Class文件的字节流中包含的信息符合当前虚拟机的要求，并且不会危害虚拟机自身的安全。 验证阶段的4个检验动作： 文件格式验证：通过这个阶段的验证后，字节流才会进入内存的方法区中进行存储，所以后面的3个验证阶段全部都是基于方法区的存储结构进行的，不会再直接操作字节流。 元数据验证 字节码验证：确定程序语义是合法的、符合逻辑的。 符号引用验证 3 准备准备阶段是正式为类变量分配内存并设置类变量初始值的阶段，这些变量所使用的内存都将在方法区中进行分配。 注意：首先，这时候进行内存分配的仅包括类变量（被static修饰的变量），而不包括实例变量，实例变量将会在对象实例化时随着对象一起分配在Java堆中。其次，这里所说的初始值“通常情况”下是数据类型的零值。java程序的初始值赋值动作在初始化阶段才会执行。 特殊情况：如果类字段的字段属性表存在ConstantValue属性，那在准备阶段变量value就会被初始化为ConstantValue属性所指定的值，假设上面类变量value的定义为： public static final int value = 123 编译时javac将会为value生成ConstantValue属性，在准备阶段虚拟机就会根据ConstantValue的设置将value赋值为123。因为关键字不但有static，还有final。 4 解析解析阶段是虚拟机将常量池内的符号引用替换为直接引用的过程。解析动作主要针对类或者接口、字段、类方法、接口方法、方法类型、方法句柄和调用点限定符7类符号引用进行，分别对应于常量池的……..。 5 初始化类初始化阶段是类加载过程的最后一步。到了初始化阶段，才真正开始执行类中定义的Java程序代码（或者说字节码），是执行类构造器()方法的过程。 父类中定义的静态语句块要优先于子类的变量赋值操作。 类与类加载器双亲委派模型从Java虚拟机的角度将，只存在两种不同类型的类加载器：一种是启动类加载器，是虚拟机自身的一部分；另一种就是所有其他的类加载器。独立于虚拟机外部，并且全都继承自抽象类java.lang.ClassLoader。 3种类型的类加载器： 启动类加载器：加载\lib目录中的并且是虚拟机识别的类库加载到虚拟机内存中。改加载器无法被Java程序直接引用。 扩展类加载器：加载\lib\ext目录中的类库。开发者可以直接使用。 应用程序类加载器：负责加载用户类路径（ClassPath）上所指定的类库。 如果有必要，还可以加入自己定义的类加载器。 这里类加载器之间的父子关系一般不会以继承的关系来实现，而是都使用组合关系来复用父类加载器的代码。 双亲委派模型的工作过程：……..。 破坏双亲委派模型]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第6章 类文件结构]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC6%E7%AB%A0-%E7%B1%BB%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84%2F</url>
+    <content type="text"><![CDATA[无关性的基石各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。无关性： 平台无关性 语言无关性实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。 Class类文件的结构 任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来说，类或接口并不一定都得定义在文件里。 Class文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑第排列在Class文件中，中间没有任何分隔符。当遇到需要占用8位字节以上空间的数据项时，则会按照高位在前的方式分割成若干个8位字节进行存储（大端模式）。 Class文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构中只有两种数据类型：无符号数和表。 无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8编码构成字符串。 表是由多个无符号数或者其他表作为数据项构成的复合数据类型，所有表都习惯性地以“_info”结尾。整个Class文件本质上就是一张表。 魔数与Class文件的版本 每个Class文件的头4个字节称为魔数，唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件，使用魔数不是扩展名来进行识别主要是基于安全方面的考虑，值为：0xCAFEBABE。 紧接着魔数的4个字节存储的是Class文件的版本号：第5和第6个字节是次版本号，第7和第8个字节是主版本号。 常量池紧接着主次版本号之后的是常量池入口，常量池可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，也是占用Class文件空间最大的数据项目之一，同时他还是在Class文件中第一个出现的表类型数据项目。 常量池容量计数器是从1开始计数的，表示常量的个数。常量翅中主要存放两大类常量： 字面量 符号引用 字面量比较接近于Java语言层面的常量概念，如字符串、声明为final的常量值等。而符号引用则属于编译原理方面的概念，包括了下面的三类常量： 类和接口的全限定名 字段的名称和描述符 方法的名称和描述符常量池中每一个常量都是一个表。 常量池容量为21，表示有21项常量 由于Class文件中方法、字段等都需要引用CONSTANT_Utf8_info型常量来描述名称，所以CONSTANT_Utf8_info型常量的最大长度也就是Java中方法、字段名的最大长度。而这里的最大长度就是length的最大值，既u2类型能表达的最大值65535.所以Java程序中如果定义了超过65KB因为字符串的变量或方法名将会无法编译。 javap工具用于分析Class文件字节码的。 访问标志这个标志用于识别一些类或者是接口层次的访问信息。 类索引、父类索引与接口索引集合Class文件中由这三项数据来确定这个类的继承关系。 字段表集合字段表用于描述接口库或者类中声明的变量。 字段包括类级变量以及实例级变量，但不包括在方法内部声明的局部变量。 字段表集合中不会列出从超类或者父类接口中继承而来的字段，但有可能列出原本Java代码中不存在的字段。对于字节码来说，如果两个字段的描述符不一致，那字段重名就是合法的。 方发表集合volatile关键字和transient关键字不能修饰方法，所以方发表的访问标志中没有了ACC_VOLATITE标志和ACC_TRANSIENT标志。 属性表集合在Class文件、字段表、方发表都可以携带自己的属性表集合，以用于描述某些场景专有的信息。操作栈数？max_stack代表了操作数栈深度的最大值。在方法执行的任意时刻，操作栈数都不会超过这个深度。虚拟机运行的时候需要根据这个值来分配栈帧中的操作栈深度。 1 Code属性了解Code属性是学习后面关于字节码执行引擎内容的必要基础，能直接阅读字节码也是工作中分析Java代码语义问题的必要工具和基本技能。 使用Javap 命令计算字节码指令： javap -verbose TestClass 在实例方法的局部变量表中至少会存在一个指向当前对象实例的局部变量，局部变量表中也会预留第一个Slot位来存放对象实例的引用，方法参数值从1开始计算。，这个处理只对实例方法有效。 2 Exceptions属性Exceptions属性的作用是列举出方法中可能抛出的受检查异常(Checked Exceptions)，也就是方法描述时在throws关键字后面列举的异常。 3 LineNumberTable属性LineNumberTable属性用于描述Java源码行号与字节码行号之间的对应关系。 4 LocalVariableTable属性LocalVariableTable属性用于描述栈帧中局部变量表中的变量与Java源码中定义的变量之间的关系 5 SourceFile属性SourceFile属性用于记录生成这个Class文件的源码文件名称。 6 ConstantValue属性ConstantValue属性的作用是通知虚拟机自动为静态变量赋值。onstantValue的属性值只能限于基本类型和String。 7 InnerClasses属性InnerClasses属性用于记录内部类与宿主类之间的关联。 8 Deprecated及Synthetic属性9 StackMapTable属性10 Signature11 BootstrapMethods属性字节码指令简介Java虚拟机的指令由一个字节长度、代表着某种特定操作含义的数字（称为操作码，Opcode）以及跟随其后的零至多个代表此操作所需参数（称为操作数，Operands）而构成。 1 字节码与数据结构阅读字节码作为了解Java虚拟机的基础技能，是一项应当熟练掌握的能力。 2 加载和存储指令加载和存储指令用于将数据在栈帧中的局部变量表和操作数栈之间来回传输。 3 运算指令运算指令用于对两个操作数栈上的值进行某种特定运算，并把结果重新存入到操作栈顶。 算术指令分为两种： 对整型数据进行运算的指令。 对浮点型数据进行运算的指令。 无论哪种算术指令，都使用Java虚拟机的数据类型，由于没有直接支持byte，short，char和boolean类型的算术指令，对于这类数据的运算，应使用操作int类型的指令代替。 4 类型转换指令5 对象创建与访问指令6 操作数栈管理指令操作数栈的指令： 将操作数栈的栈顶一个或两个元素出栈：pop、pop2。 复制栈顶一个或两个数值并将复制值或双份的复制值重新压入栈顶：dup、dup2、dup_x1、dup_x2、dup2_x2。 将栈最顶端的两个数值互换：swap。 7 控制转移指令8 方法调用和返回指令9 异常处理指令10 同步指令共有设计和私有设计]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第5章 调优案例分析与实战]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC5%E7%AB%A0-%E8%B0%83%E4%BC%98%E6%A1%88%E4%BE%8B%E5%88%86%E6%9E%90%E4%B8%8E%E5%AE%9E%E6%88%98%2F</url>
+    <content type="text"><![CDATA[高性能硬件上的程序部署策三大块非用户程序时间： 编译时间 垃圾收集时间 GC时间 新生代minor GC 老年代Full GC编译时间是指虚拟机的JIT编译器编译热点代码的耗时。Java的运行时编译最大的缺点就是它进行编译需要消耗程序正常的运行时间。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第4章 虚拟机性能监控与故障处理工具]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC4%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%80%A7%E8%83%BD%E7%9B%91%E6%8E%A7%E4%B8%8E%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7%2F</url>
+    <content type="text"><![CDATA[概述给定一个系统定位问题的时候，只是、经验是关键基础，数据时依据，工具是运用知识处理数据的手段。这里说的数据包括：运行日志、异常对战、GC日志、线程快照（threaddump/jvacore文件）、堆转存储快照（headdump/hprof文件）等。 JDK的命令行工具 解决liunx下jstat无法查看虚拟机状态的问题：连接。 启动后,这时候使用jstat查看该tomcat的状态提示pid not found,使用jps也没有这条信息,但是ps查看明明就有,顿时感觉很坑爹.一顿查找资料后,逐步解决.首先java进程会向/tmp里写文件,路径为hsperfdata$user/$pid,如果在tmp下没有这个文件jps就会查找不到这个线程.如果tmp下的java临时文件有误就会提示xx – process information unavailable,这时候把tmp下hsperfdata这样的都删了,然后重启java程序,再使用jps就能正常输出结果了. 然后tomcat的catalina.sh里开头设置CATALINA_TMPDIR=/tmp,这样下面的脚本执行-Djava.io.tmpdir=\”$CATALINA_TMPDIR\” \,这样就可以达到效果是加上java参数-Djava.io.tmpdir=/tmp.这时候重启tomcat后,输入jstat -gcutil pid,就可以显示jvm的情况了]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第3章 垃圾收集器与内存分配策略]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC3%E7%AB%A0-%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E4%B8%8E%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5%2F</url>
+    <content type="text"><![CDATA[概述 每个栈中的栈帧随着方法的进入和退出而有条不紊地执行着出栈和入栈操作，每一个栈帧中分配多少内存基本上是在类结构确定下来是就已知的。 程序计数器、虚拟机栈、本地方法栈这几个区域的内存分配和回收都具备确定性，不需要过多考虑回收的问题，因为方法结束或者线程结束时，内存自然就跟着回收了。而java堆和方法区则不一样。 对象已死吗Java堆回收 主流的java虚拟机里面没有选用引用计数器算法来管理内存，其中最主要的原因是它很难解决对象之间互相循环引用的问题。 通过可达性分析算法来判定对象是否存活着，算法思路：通过一系列的称为“GC Roots”的对象作为起始点，从这些节点开始向下搜索，搜索所走过的路径称为引用链（Reference Chain），当一个对象到GC Roots没有任何引用链相连时，则证明此对象是不可用的。 可作为GC Roots的对象包括下面几种: 虚拟机栈（栈帧中的本地变量表）中引用的对象。 方法区中类静态属性引用的对象 方法区中常量引用的对象 本地方法栈中JNI引用的对象 java将引用分为强引用、软引用、弱引用、虚引用，引用强度逐渐减弱。 可达性分析算法中不可达的对象，也并非是“非死不可”的，这时候它们暂时处于“缓刑”阶段，要真正宣告一个对象死亡，至少要经历两次标记过程。 finalize()方法中对象逃脱死亡命运的最后一次机会。 任何一个对象的finalize()方法都只会被系统自动调用一次，如果对象面临下一次回收，它的finalize()方法不会再次被执行。尽量避免使用它。 方法区回收 Java虚拟机规范中确实说过可以不要求虚拟机在方法区(永久代)实现垃圾收集。 永久代的垃圾回收主要回收两部分内容：废弃产量和无用的类。 无用的类： 该类所有的实例都已经被回收，也就是Java堆中不存在该类的任何引用。 加载该类的ClassLoader已经被回收。 该类对用的java.lang.Class对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。 垃圾收集算法 什么是新生代、永久代、老年代 HotSpot的算法实现以下是介绍如何发起内存回收，还没回收： 枚举根节点； 安全点中断方式：抢先式中断、主动式中断，几乎没有虚拟机采用抢先式中断； 安全区域：解决了“不执行的线程”无法到达安全点的问题。安全区域是指在一段代码片段之中，引用关系不会发生变化。 垃圾收集器（真正回收）真正回收垃圾 Serial收集器（新生代收集器，client模式下是很好的选择，单CPU下效果好） ParNew收集器：Serial多线程版本（Server模式下首选新生代收集器） Parallel Scavenge收集器（新生代）：吞吐量优先的收集器 Serial Old收集器（老年代） CMS收集器（老年代）：以获取最短回收停顿时间为目标的收集器。步骤： 初始标志 并发标志 重新标志 并发清除 G1收集器（新生代、老年代），优点： 并行与并发 分代收集（新生代、老年代） 空间整合（整体：标记-整理实现，局部复制算法实现） 可预测的停顿 步骤： 初始标记 并发标记 最终标记 筛选回收 理解GC日志阅读GC日志是处理Java虚拟机内存问题的基础技能。 内存分配与回收策略给对象分配内存，对象主要分配在新生代的Eden区上，如果启动了本地线程分配缓冲，将按线程优先在TLAB上分配。 几条最普遍的内存分配规则 对象优先在Eden分配，-Xmn10M表示10M分配给了新生代；-XX:SurvivorRatio=8决定了新生代中Eden区与一个Survivor区的空间比例是8:1. Minor GC和Full GC有什么不一样吗？ 大对象直接进入老年代最典型的大对象就是那种很长的字符串以及数组。虚拟机提供了一个-XX:PretenureSizeThreshold参数，令大于这个设置值的对象直接在老年代分配。 长期存活的对象将进入老年代 对象晋升老年代的年龄阈值，可以通过参数：-XX:MaxTenuringThreshold设置。 1 对象优先在Eden中分配，当Eden中没有足够的空间分配时会促发一次Minor GC。每次Minor GC结束后，Eden区会清空，因为它会把Eden中还依然存活的对象放到Survivor中，当Survivor中放不下时，则由分派担保进入老年代中。2 大对象直接进入老年代中。-XX:+PretenuerSizeThreshold 控制”大对象的“的大小。即当创建的对象大于这个临界值时，则该对象直接进入老年代。3 长期存活的对象将进入老年代。虚拟机对每个对象定义了一个对象年龄（Age）计数器。当年龄增加到一定的临界值时，就会晋升到老年代中，该临界值由参数：-XX:MaxTenuringThreshold来设置。如果对象在Eden出生并在第一次发生Minor GC时仍然存活，并且能够被Survivor中所容纳的话，则该对象会被移动到Survivor中，并且设Age=1；以后每经历一次Minor GC，该对象还存活的话会被移动到另一个Survivor区中，并且Age=Age+1。4 动态对象年龄判定：如上所示，虚拟机并不总是要求对象的年龄必须达到MaxTenuringThreshold才能晋升到老年代，如果在Survivor区中相同年龄（设年龄为age）的对象的所有大小之和超过Survivor空间的一半，年龄大于或等于该年龄（age）的对象就可以直接进入老年代，无需等到MaxTenuringThreshold中要求的年龄。 动态对象年龄判定如果在Survivor空间中相同年龄所有对象大小的总和大于Survivor空间的一半，年龄大于或等于该年龄的对象就可以直接进入老年代，无须等到MaxTenuringThreshold中要求的年龄。 空间分配担保每一次回收晋升到老年代对象容量的平均大小值最为经验值，与老年代的剩余空间进行比较，决定是否进行Full GC来让老年代腾出更多的空间。老年代空间不足会出现担保失败。 总结内存回收与垃圾收集器在很多时候都是影响系统性能、并发能力的主要因素之一，虚拟机之所以提供多种不同的收集器以及提供大量的调节参数，是因为只有根据实际应用需求、实现方式选择最优的收集方式才能获取最高的性能。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第2章 Java内存区域与内存溢出异常]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC2%E7%AB%A0-Java%E5%86%85%E5%AD%98%E5%8C%BA%E5%9F%9F%E4%B8%8E%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%BC%82%E5%B8%B8%2F</url>
+    <content type="text"><![CDATA[计数器 字节码解释器工作时通过改变计数器的值来选取下一条需要执行的字节码指令。 每个线程有独立的计数器。 如果正在执行的是Native方法，这个计数器值为空（Undefined)。 计数器的内存区域是唯一一个在Java虚拟机规范中没有规定任何OutOfMemoryError情况的区域。 虚拟机栈 与计数器一样，虚拟机栈也是线程私有的，生命周期与线程相同。 描述的是Java方法执行的内存模型 栈帧是方法运行时的基础数据结构。 Java虚拟机规范对这个区域规定了两种异常情况：如果线程请求的栈深度大于虚拟机所允许的深度，将抛出StackOverflowError异常；如果虚拟机栈可以动态扩展，扩展时无法申请到足够的内存，就会抛出OutOfMemoryError异常。本地方法栈 为虚拟机使用到的Native方法服务。 本地方法栈也会抛出StackOverflowError和OutOfMemory异常。 与虚拟机栈的作用相似。 Java堆 Java堆是被所有线程共享的一块内存区域，在虚拟机启动时创建。以为目的是存放对象实例。 是垃圾收集器管理的主要区域。 堆中没有内存完成实例分配，并且堆也无法再扩展时，将会抛出OutOfMemoryError异常。 方法区 也是各个线程共享的内存区域，用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。 除了和java堆一样不需要连续的内存和可以选择规定大小或者可扩展外，还可以选择不实现垃圾收集。 这区域的内存回收目标主要是针对常量池的回收和对类型的卸载。 无法满足内存分配的需求时，将会抛出OutOfMemoryError异常。 运行时常量池 是方法区一部分。 常量池用于存放编译器生成的各种字面量和符号引用，这部分内容将在类加载后进入方法区的运行时常量池存放。 直接内存 NIO 对象的创建 对象在堆上的内存分配方式分为指针碰撞和空闲列表。 对象内存空间分配完成后，内存空间都初始化为零值。 对象的内存布局 在内存中的布局分为3块区域：对象头、实例数据、对齐填充 对象的定位 通过栈上的reference数据来操作堆上的具体数据。 目前主流的访问方式有使用句柄和直接指针两种。 排错 注意区分是内存泄露(Memory Leak)，还是内存溢出(Memory Overflow) 使用Eclipse Memory Analyzer进行分析，安装教程：http://www.jianshu.com/p/3b3c3a914724 堆溢出 堆空间中的每个对象都是由一个根元素为起点被层层调用的。因此，一个对象还被某一个存活的根元素所引用，就会被认为是存活对象，不能被回收，进行内存释放。因此，我们可以通过分析一个对象到根元素的引用路径来分析为什么该对象不能被顺利回收。如果说一个对象已经不被任何程序逻辑所需要但是还存在被根元素引用的情况，我们可以说这里存在内存泄露。 -Xmx20m -Xms20m 设置堆的最大最小；-Xss128k 设置虚拟机栈的大小；-Xoss设置本地方法栈大小；MaxPermSize(最大方法区容量) 虚拟机栈和本地方法栈溢出 如果线程请求的栈深度大于虚拟机所允许的最大深度，将抛出StackOverflow异常（栈溢出）；如果虚拟机在扩展栈时无法申请到足够的内存空间，则将抛出OutOfMemoryError异常（内存泄露）。 为了防止多线程导致的内存溢出，要注意控制虚拟机栈和本地方法栈的大小。 方法区和运行时常量池溢出运行时常量区是方法区的一部分。 String.intern()方法在JDK1.7之后的改变，注意“首次出现原则”。 本机直接内存溢出 DirectMemory容量可通过 -XX: MaxDirectMemorySize指定，如果不指定则默认与Java堆最大值（-Xmx指定）一样。 由DirectMemory导致的内存溢出，一个明显的特征是在Heap Dump文件中是不会看见明显的异常，如果读者返现OOM之后Dump文件很小，而程序中有直接或间接使用了NIO，那就可以考虑检查一下是不是这方面的原因。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第1章 走进Java]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC1%E7%AB%A0-%E8%B5%B0%E8%BF%9BJava%2F</url>
+    <content type="text"><![CDATA[java优点 摆脱平台束缚； 提供一个相对安全的内存管理和访问机制，避免了绝大部分的内存泄露和指针越界问题 实现了热点代码监测和运行时编译及优化 有一套完善的应用程序接口，还有无数来自商业机构和开源社区的第三方类库来帮助它实现各种各样的功能 java技术体系Java程序设计语言、Java虚拟机、Java API类库这三部分统称为JDK，JDK是用于支持Java程序开发的最小环境 Java类库中的Java SE API子集和Java虚拟机这两部分统称为JRE，JRE是支持Java程序运行的标准环境。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[我的第一篇博客]]></title>
+    <url>%2F2017%2F10%2F30%2F%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E5%8D%9A%E5%AE%A2%2F</url>
+    <content type="text"><![CDATA[首先要纪念一下，这是我第一次写博客，这也是我的第一篇博文。我希望以后几年，十几年，几十年都能够坚持写下去，与大家分享生活与工作中一切好的东西！ 我一直都想把工作和生活中的点点滴滴以博文的方式跟大家分享，但是一直都没有付诸行动（其实就是懒），直到前段时间跟同一年以应届生身份进公司的同事聊天时才知道他一直在坚持写博客，他向我推荐了他的博客，还告诉我怎么去搭建博客站点（这里要感谢github），这才完全激起了我的兴趣。当然我不希望自己只有三分钟热度，我希望自己能够一直写下去。 当然，不只是一时兴起，我打算写博客还基于几个原因： 我一直是分享的受益者，这些年通过大家的分享帮助我解决了很多问题，因此，我希望尽最大努力回馈大家； 将工作中遇到的一些坑或是解决的某些技术问题做一个总结，以备后期查阅； 记录技术与生活相关的学习笔记，展示自己的技术栈，督促自己必须不断地学习； 写一些生活感想，记录一些生活的美好瞬间； 加油吧，少年！（嘿嘿）]]></content>
+      <categories>
+        <category>生活</category>
+      </categories>
+      <tags>
+        <tag>感想</tag>
+      </tags>
+  </entry>
 </search>
