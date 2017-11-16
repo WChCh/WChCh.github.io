@@ -3,7 +3,7 @@
   <entry>
     <title><![CDATA[使用easyUI组件combogrid面板相关问题]]></title>
     <url>%2F2017%2F11%2F15%2F%E4%BD%BF%E7%94%A8easyUI%E7%BB%84%E4%BB%B6combogrid%E9%9D%A2%E6%9D%BF%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98%2F</url>
-    <content type="text"><![CDATA[问题使用combogrid组件时，弹出的面板宽度总是与数据框的长度一样，并不是想官方demo那样弹出理想的宽度。各种属性各种设置也没解决问题，网上找了好久也没有找到答案。 解决后来继续翻官方demo，发现了一个属性，试了一下成功了。属性如下：1panelMinWidth : &apos;50%&apos;, 还得加入fix:true,属性，使得表格大小与面板一致设置值为：50%。 下来面板中加入输入框因为combogrid继承combo以及datagrid，因此可是使用combo以及datagrid的特性。通过”toolbar”属性可以引入输入框形成组合查询。 注意问题：在Firefox浏览器中可能会出现数据框加载显示效果问题，可以先默认隐藏输入框，再在列表初始化函数中通过js显示该输入框。]]></content>
+    <content type="text"><![CDATA[问题使用combogrid组件时，弹出的面板宽度总是与数据框的长度一样，并不是想官方demo那样弹出理想的宽度。各种属性各种设置也没解决问题，网上找了好久也没有找到答案。 解决后来继续翻官方demo，发现了一个属性，试了一下成功了。属性如下：1panelMinWidth : &apos;50%&apos;, 还得加入fix:true,属性，使得表格大小与面板一致设置值为：50%。 下来面板中加入输入框因为combogrid继承combo以及datagrid，因此可是使用combo以及datagrid的特性。通过”toolbar”属性可以引入输入框形成组合查询。 注意问题：在Firefox浏览器中可能会出现数据框加载显示效果问题，可以先默认隐藏输入框，再在列表初始化函数中通过js显示该输入框。 设置默认选中第一行1234onLoadSuccess:function()&#123; //默认选中第一行 $(&apos;#billingReport_InvoiceTermComboBoxId&apos;).combogrid(&apos;grid&apos;).datagrid(&apos;selectRow&apos;,0);; &#125;,]]></content>
       <categories>
         <category>技术</category>
         <category>学习</category>
