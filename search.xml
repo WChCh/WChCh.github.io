@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[使用easyUI组件combogrid面板相关问题]]></title>
+    <url>%2F2017%2F11%2F15%2F%E4%BD%BF%E7%94%A8easyUI%E7%BB%84%E4%BB%B6combogrid%E9%9D%A2%E6%9D%BF%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98%2F</url>
+    <content type="text"><![CDATA[问题使用combogrid组件时，弹出的面板宽度总是与数据框的长度一样，并不是想官方demo那样弹出理想的宽度。各种属性各种设置也没解决问题，网上找了好久也没有找到答案。 解决后来继续翻官方demo，发现了一个属性，试了一下成功了。属性如下：1panelMinWidth : &apos;50%&apos;, 还得加入fix:true,属性，使得表格大小与面板一致设置值为：50%。 下来面板中加入输入框因为combogrid继承combo以及datagrid，因此可是使用combo以及datagrid的特性。通过”toolbar”属性可以引入输入框形成组合查询。 注意问题：在Firefox浏览器中可能会出现数据框加载显示效果问题，可以先默认隐藏输入框，再在列表初始化函数中通过js显示该输入框。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>前端</category>
+        <category>js</category>
+        <category>EasyUI</category>
+        <category>Combo</category>
+        <category>Datagrid</category>
+        <category>Combogrid</category>
+        <category>问题</category>
+      </categories>
+      <tags>
+        <tag>js</tag>
+        <tag>EasyUI</tag>
+        <tag>Combo</tag>
+        <tag>Datagrid</tag>
+        <tag>Combogrid</tag>
+        <tag>问题</tag>
+        <tag>前端</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[记一次tomcat崩溃问题排查过程]]></title>
     <url>%2F2017%2F11%2F10%2F%E8%AE%B0%E4%B8%80%E6%AC%A1tomcat%E5%B4%A9%E6%BA%83%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B%2F</url>
     <content type="text"><![CDATA[产品在生产环境中跑了一段时间后，每天早晨运维人员都会发现程序崩溃，无法提供服务，重启之后就好了，而且白天都没问题，运维人员因此叫苦连天。 查看日志发现有堆内存溢出的提示，并且都是发生在凌晨一点钟左右，但找不到是哪个线程导致的，重启之后通过jstack、jmap、jstat等命令查看各项指标都正常。无奈只能在catalina.sh配置文件中加入JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/.../oom.hprof&quot;配置项，当程序因为内存溢出崩溃时能够查看当时的jvm内存使用情况。 隔天早上再次发生崩溃，产生了oom.hprof文件，让运维人员传过来，导入MemoryAnalyzer中进行分析。分析过程中发现某个定时任务的线程对象占用了将近一半的堆内存，并且对象类型为： 1234567891011121314151617181920212223242526272829303132333435363738394041java.lang.Object[4102267] @ 0xe817b3f0 16,409,088 864,074,952 48.56% ..+com.mysql.jdbc.ByteArrayRow @ 0xb0176c20 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xe3044560 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xce6ac738 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xaf2ab198 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xa82fbcc0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xcbce65f8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb1b9e200 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb515f4a0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xde9fab68 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xac3662a8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xd3b9e6f8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xe3044690 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xa51149a8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xafc57d70 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0x8f536ab0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xd6bb6588 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb0d39428 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0x98c5da88 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb2de5950 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xde9fac98 通过在网上搜索答案，初步猜测是一次从数据库中读取了大量的数据到内存中导致内存溢出的崩溃问题。接着查看线程栈，定位到了线程中导致问题的某一处代码。 这一处代码做的是一个根据条件定期删除数据库的操作，这是经过本地调试发现每次做删除操作时并没有报异常，但也没删除成功。此时可以了解了问题发生的原因，由于此每次都没能成功删除数据，但是还会有新数据不断加入，日积月累数据量会越来越庞大。每次做删除操作时JPA预先加载所有要删除的数据到内存中，这时大数据量会导致JVM实例堆溢出崩溃。 定位到问题代码之后要分析一下为什么没有成功删除数据。这里要先说一下，我们项目中使用的是spring boot，持久层api使用的是spring data jpa。通过分析发现代码中没有在service层的实现类或是相关方法上加@transactional，导致的删除数据时事务不生效。 但是当我给service层实现类加上@transactional时，删除数据仍然不成功，分析代码发现，他这个service层实现类不但有implements接口，还extends抽象类，并不是纯碎的接口实现，即使直接加在方法上也不行，为什么不成功我暂时还没有时间去研究。无奈只能在repository层加，操作才成功，显然这种方法很不好！没办法，先交给代码关系人来解决吧，我也没时间和精力！]]></content>
