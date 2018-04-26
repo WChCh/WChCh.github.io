@@ -1,1446 +1,386 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search> 
-  
-    
-    <entry>
-      <title><![CDATA[CAS(Compare and Swap) 原理学习]]></title>
-      <url>/2017/12/28/CAS-Compare-and-Swap-%E5%8E%9F%E7%90%86%E5%AD%A6%E4%B9%A0/</url>
-      <content type="html"><![CDATA[<p>最近打算学习CAS的相关原理，所以转载了一下两篇文章：</p>
-<p><a href="http://www.cnblogs.com/Leo_wl/p/6899716.html" target="_blank" rel="external">浅谈CAS(Compare and Swap) 原理</a></p>
-<p><a href="https://www.cnblogs.com/longshiyVip/p/5205689.html" target="_blank" rel="external">CAS(Compare and Swap)理解</a></p>
-<h4 id="什么叫CAS（Compare-and-Swap）"><a href="#什么叫CAS（Compare-and-Swap）" class="headerlink" title="什么叫CAS（Compare and Swap）?"></a>什么叫CAS（Compare and Swap）?</h4><p>硬件同步原语！！ 什么蛋疼的名字，一般人很难理解。根据英文全称翻译==比较与交换，这个名字大致还能理解一点,目前先暂且这么理解吧.</p>
-<p>有啥用处？</p>
-<p>对于常用多线程编程的人估计知道，对于一般人估计都不曾听说。在jdk5之前,我们知道，在多线程编程的时候，为了保证多个线程对一个对象同时进行访问时,我们需要加同步锁synchronized,保证对象的在使用时的正确性，但是加锁的机制会导致如下几个问题</p>
-<p>1.加多线程竞争下，加锁和释放锁会导致较多的上下文切换，引起性能问题。</p>
-<p>2.多线程可以导致死锁的问题。</p>
-<p>3.多线程持有的锁会导致其他需要此锁的线程挂起。</p>
-<p>4……</p>
-<p>有更好的办法么？</p>
-<p>锁的分类：独占锁（悲观锁），乐观锁</p>
-<p>独占锁：synchronized就是一种独占锁，它会导致所有需要此锁的线程挂起，等待锁的释放。</p>
-<p>乐观锁：每次不加锁去完成操作，如果因为冲突失败就重试，直到成功。</p>
-<p>CAS的机制就相当于这种（非阻塞算法），CAS是由CPU硬件实现，利用JNI来完成CPU指令的操作，所以执行相当快.CAS有三个操作参数：内存地址，期望值，要修改的新值，当期望值和内存当中的值进行比较不相等的时候，表示内存中的值已经被别线程改动过，这时候失败返回，当相等的时候，将内存中的值改为新的值，并返回成功。</p>
-<a id="more"></a>
-<h4 id="CAS缺点"><a href="#CAS缺点" class="headerlink" title="CAS缺点"></a>CAS缺点</h4><p> CAS虽然很高效的解决原子操作，但是CAS仍然存在三大问题。ABA问题，循环时间长开销大和只能保证一个共享变量的原子操作</p>
-<ol>
-<li><p>ABA问题。因为CAS需要在操作值的时候检查下值有没有发生变化，如果没有发生变化则更新，但是如果一个值原来是A，变成了B，又变成了A，那么使用CAS进行检查时会发现它的值没有发生变化，但是实际上却变化了。ABA问题的解决思路就是使用版本号。在变量前面追加上版本号，每次变量更新的时候把版本号加一，那么A－B－A 就会变成1A-2B－3A。</p>
-<p> 从Java1.5开始JDK的atomic包里提供了一个类AtomicStampedReference来解决ABA问题。这个类的compareAndSet方法作用是首先检查当前引用是否等于预期引用，并且当前标志是否等于预期标志，如果全部相等，则以原子方式将该引用和该标志的值设置为给定的更新值。</p>
-</li>
-</ol>
-<p>关于ABA问题参考文档: <a href="http://blog.hesey.NET/2011/09/resolve-aba-by-atomicstampedreference.html" target="_blank" rel="external">http://blog.hesey.NET/2011/09/resolve-aba-by-atomicstampedreference.html</a></p>
-<ol>
-<li>循环时间长开销大。自旋CAS如果长时间不成功，会给CPU带来非常大的执行开销。如果JVM能支持处理器提供的pause指令那么效率会有一定的提升，pause指令有两个作用，第一它可以延迟流水线执行指令（de-pipeline）,使CPU不会消耗过多的执行资源，延迟的时间取决于具体实现的版本，在一些处理器上延迟时间是零。第二它可以避免在退出循环的时候因内存顺序冲突（memory order violation）而引起CPU流水线被清空（CPU pipeline flush），从而提高CPU的执行效率。</li>
-</ol>
-<ol>
-<li><p>只能保证一个共享变量的原子操作。当对一个共享变量执行操作时，我们可以使用循环CAS的方式来保证原子操作，但是对多个共享变量操作时，循环CAS就无法保证操作的原子性，这个时候就可以用锁，或者有一个取巧的办法，就是把多个共享变量合并成一个共享变量来操作。比如有两个共享变量i＝2,j=a，合并一下ij=2a，然后用CAS来操作ij。从Java1.5开始JDK提供了AtomicReference类来保证引用对象之间的原子性，你可以把多个变量放在一个对象里来进行CAS操作。</p>
-</li>
-<li><p>比较花费CPU资源，即使没有任何争用也会做一些无用功。</p>
-</li>
-<li><p>会增加程序测试的复杂度，稍不注意就会出现问题。</p>
-</li>
-</ol>
-<h5 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h5><p>可以用CAS在无锁的情况下实现原子操作，但要明确应用场合，非常简单的操作且又不想引入锁可以考虑使用CAS操作，当想要非阻塞地完成某一操作也可以考虑CAS。不推荐在复杂操作中引入CAS，会使程序可读性变差，且难以测试，同时会出现ABA问题。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> Java </category>
-            
-            <category> 并发 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 并发 </tag>
-            
-            <tag> CAS </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Java并发学习笔记]]></title>
-      <url>/2017/12/26/Java%E5%B9%B6%E5%8F%91%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</url>
-      <content type="html"><![CDATA[<h4 id="并发基础"><a href="#并发基础" class="headerlink" title="并发基础"></a>并发基础</h4><h5 id="synchronized关键字"><a href="#synchronized关键字" class="headerlink" title="synchronized关键字"></a>synchronized关键字</h5><ol>
-<li>对某个对象加锁</li>
-<li>当修饰静态方法或是代码块时，表示对Class对象加锁。</li>
-<li>同步和非同步方法可以同时调用。</li>
-<li>一般情况下要对读方法和写方法同时加锁，要不很可能会出现脏读问题。</li>
-<li>一个同步方法可以调用另外一个同步方法，一个线程已经拥有某个对象的锁，再次申请的时候仍然会得到该对象的锁，synchronized获得的锁是可重入的。</li>
-<li>程序在执行过程中，如果出现异常，默认情况锁会被释放。</li>
-<li>同步代码块中的语句越少越好。</li>
-<li>锁定某对象o，如果o的属性发生改变，不影响锁的使用，但是如果o变成另外一个对象，则锁定的对象发生改变，应该避免将锁定对象的引用变成另外的对象。</li>
-<li>不要以字符串常量作为锁定对象，因为你的程序和你用到的类库不经意间使用了同一把锁，比如相同的字符串常量。</li>
-</ol>
-<h5 id="volatile关键字"><a href="#volatile关键字" class="headerlink" title="volatile关键字"></a>volatile关键字</h5><p>volatile只能保证可见性，但是不保证原子性。</p>
-<ol>
-<li>volatile并不能保证多个线程共同修改同一变量时所带来的不一致问题，也就是说volatile不能替代synchronized。</li>
-<li>nchronized可以保证可见性和原子性，volatile只能保证可见性。</li>
-</ol>
-<h5 id="原子操作类"><a href="#原子操作类" class="headerlink" title="原子操作类"></a>原子操作类</h5><p>使用原子方式更新基本类型，共包括3个类：</p>
-<ul>
-<li>AtomicBoolean：原子更新布尔变量</li>
-<li>AtomicInteger：原子更新整型变量</li>
-<li>AtomicLong：原子更新长整型变量</li>
-</ul>
-<p>解决同样的问题的更高效的方法，使用AtomXXX类，AtomXXX类本身方法都是原子性的，但不能保证多个方法连续调用是原子性的。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">/*volatile*/ //int count = 0;</div><div class="line"></div><div class="line">AtomicInteger count = new AtomicInteger(0); </div><div class="line"></div><div class="line">/*synchronized*/ void m() &#123; </div><div class="line">for (int i = 0; i &lt; 10000; i++)</div><div class="line">	//if count.get() &lt; 1000</div><div class="line">	count.incrementAndGet(); //count++</div><div class="line">&#125;</div><div class="line"></div><div class="line">public static void main(String[] args) &#123;</div><div class="line">	T t = new T();</div><div class="line"></div><div class="line">	List&lt;Thread&gt; threads = new ArrayList&lt;Thread&gt;();</div><div class="line"></div><div class="line">for (int i = 0; i &lt; 10; i++) &#123;</div><div class="line">	threads.add(new Thread(t::m, &quot;thread-&quot; + i));</div><div class="line">&#125;</div><div class="line"></div><div class="line">threads.forEach((o) -&gt; o.start());</div><div class="line"></div><div class="line">threads.forEach((o) -&gt; &#123;</div><div class="line">	try &#123;</div><div class="line">		o.join();</div><div class="line">	&#125; catch (InterruptedException e) &#123;</div><div class="line">		e.printStackTrace();</div><div class="line">	&#125;</div><div class="line">&#125;);</div><div class="line"></div><div class="line">System.out.println(t.count);</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<a id="more"></a>
-<h4 id="ThreadLocal"><a href="#ThreadLocal" class="headerlink" title="ThreadLocal"></a>ThreadLocal</h4><p>ThreadLocal线程局部变量，是使用空间换时间，synchronized是使用时间换空间。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">//volatile static Person p = new Person();</div><div class="line">static ThreadLocal&lt;Person&gt; tl = new ThreadLocal&lt;&gt;();</div><div class="line"></div><div class="line">public static void main(String[] args) &#123;</div><div class="line">			</div><div class="line">new Thread(()-&gt;&#123;</div><div class="line">	try &#123;</div><div class="line">		TimeUnit.SECONDS.sleep(2);</div><div class="line">	&#125; catch (InterruptedException e) &#123;</div><div class="line">		e.printStackTrace();</div><div class="line">	&#125;</div><div class="line">	tl.set(new Person());</div><div class="line">	System.out.println(tl.get().name);</div><div class="line">&#125;).start();</div><div class="line"></div><div class="line">new Thread(()-&gt;&#123;</div><div class="line">	try &#123;</div><div class="line">		TimeUnit.SECONDS.sleep(1);</div><div class="line">	&#125; catch (InterruptedException e) &#123;</div><div class="line">		e.printStackTrace();</div><div class="line">	&#125;</div><div class="line">	tl.set(new Person());</div><div class="line">	System.out.println(tl.get());</div><div class="line">&#125;).start(); </div><div class="line">&#125;</div><div class="line"></div><div class="line">static class Person &#123;</div><div class="line">	String name = &quot;zhangsan&quot;;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h4 id="Java中的锁"><a href="#Java中的锁" class="headerlink" title="Java中的锁"></a>Java中的锁</h4><h5 id="Lock接口"><a href="#Lock接口" class="headerlink" title="Lock接口"></a>Lock接口</h5><p>锁能够防止多个线程同时访问共享资源。Lock接口在使用时需要显示地获取和释放锁（Synchronized是隐式的），并且是可中断、可超时获取等。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">ReentrantLock1 rl = new ReentrantLock1();</div><div class="line">Lock1 r2 = new ReentrantLock1();</div></pre></td></tr></table></figure></p>
-<h5 id="队列同步器AbstractQueuedSynchronizer-AQS"><a href="#队列同步器AbstractQueuedSynchronizer-AQS" class="headerlink" title="队列同步器AbstractQueuedSynchronizer(AQS)"></a>队列同步器AbstractQueuedSynchronizer(AQS)</h5><p>队列同步器AbstractQueuedSynchronizer(AQS)，似乎我们不经常用，但是它是用来构建锁或者其他同步组件的基础框架，它使用了一个int成员变量表示同步状态，通过内置的FIFO队列来完成资源获取线程的排队工作。</p>
-<h5 id="重入锁"><a href="#重入锁" class="headerlink" title="重入锁"></a>重入锁</h5><p>推荐使用reentrantlock用于替代synchronized。</p>
-<ol>
-<li><p>需要注意的是，必须要必须要必须要手动释放锁。使用syn锁定的话如果遇到异常，jvm会自动释放锁，但是lock必须手动释放锁，因此经常在finally中进行锁的释放。示例：</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">try &#123;</div><div class="line">	lock.lock(); //synchronized(this)</div><div class="line">	for (int i = 0; i &lt; 10; i++) &#123;</div><div class="line">		TimeUnit.SECONDS.sleep(1);</div><div class="line"></div><div class="line">		System.out.println(i);</div><div class="line">		&#125;</div><div class="line">	&#125; catch (InterruptedException e) &#123;</div><div class="line">			e.printStackTrace();</div><div class="line">	&#125; finally &#123;</div><div class="line">	   lock.unlock();</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-<li><p>使用reentrantlock可以进行“尝试锁定”tryLock，这样无法锁定，或者在指定时间内无法锁定，线程可以决定是否继续等待。可以根据tryLock的返回值来判定是否锁定，也可以指定tryLock的时间，由于tryLock(time)抛出异常，所以要注意unclock的处理，必须放到finally中</p>
-  <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"> boolean locked = false;</div><div class="line">		</div><div class="line">try &#123;</div><div class="line">	locked = lock.tryLock(5, TimeUnit.SECONDS);</div><div class="line">	System.out.println(&quot;m2 ...&quot; + locked);</div><div class="line">&#125; catch (InterruptedException e) &#123;</div><div class="line">	e.printStackTrace();</div><div class="line">&#125; finally &#123;</div><div class="line">	if(locked) lock.unlock();</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<ol>
-<li><p>使用ReentrantLock还可以调用lockInterruptibly方法，可以对线程interrupt方法做出响应，实现一个线程在等待锁的过程中，可以被打断。</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line">Thread t2 = new Thread(()-&gt;&#123;</div><div class="line">try &#123;</div><div class="line">	//lock.lock();</div><div class="line">	lock.lockInterruptibly(); //可以对interrupt()方法做出响应</div><div class="line">	System.out.println(&quot;t2 start&quot;);</div><div class="line">	TimeUnit.SECONDS.sleep(5);</div><div class="line">	System.out.println(&quot;t2 end&quot;);</div><div class="line">&#125; catch (InterruptedException e) &#123;</div><div class="line">	System.out.println(&quot;interrupted!&quot;);</div><div class="line">&#125; finally &#123;</div><div class="line">	lock.unlock();</div><div class="line">&#125;</div><div class="line">&#125;);</div><div class="line">t2.start();</div><div class="line"></div><div class="line">try &#123;</div><div class="line">	TimeUnit.SECONDS.sleep(1);</div><div class="line">&#125; catch (InterruptedException e) &#123;</div><div class="line">	e.printStackTrace();</div><div class="line">&#125;</div><div class="line">t2.interrupt(); //打断线程2的等待</div></pre></td></tr></table></figure>
-</li>
-<li><p>ReentrantLock还可以指定为公平锁</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">private static ReentrantLock lock=new ReentrantLock(true); //参数为true表示为公平锁，请对比输出结果</div><div class="line">public void run() &#123;</div><div class="line">    for(int i=0; i&lt;100; i++) &#123;</div><div class="line">        lock.lock();</div><div class="line">        try&#123;</div><div class="line">            System.out.println(Thread.currentThread().getName()+&quot;获得锁&quot;);</div><div class="line">        &#125;finally&#123;</div><div class="line">            lock.unlock();</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line">public static void main(String[] args) &#123;</div><div class="line">    ReentrantLock5 rl=new ReentrantLock5();</div><div class="line">    Thread th1=new Thread(rl);</div><div class="line">    Thread th2=new Thread(rl);</div><div class="line">    th1.start();</div><div class="line">    th2.start();</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<h5 id="读写锁"><a href="#读写锁" class="headerlink" title="读写锁"></a>读写锁</h5><p>读写锁在同一时刻可以允许多个读线程访问，但是在写线程访问时，所有的读线程和其他写线程均被阻塞。读写锁维护了一对锁，一个读锁和一个写锁，通过读写分离，使得并发性相比一般的排他性锁有了很大提升。读写锁的接口为<code>ReadWriteLock</code>，其实现为<code>ReentrantReadWriteLock</code>。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">ReentrantReadWriteLock rw = new ReentrantReadWriteLock();</div><div class="line">static Lock r = rw.readLock();</div><div class="line">static Lock w = rw.writeLock();</div></pre></td></tr></table></figure></p>
-<h5 id="Condition接口"><a href="#Condition接口" class="headerlink" title="Condition接口"></a>Condition接口</h5><p>使用Lock和Condition来实现，对比使用wait和notify/notifyAll，Condition的方式可以更加精确的指定哪些线程被唤醒。并且要像wait()使用一个while循环来做限制。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">	final private LinkedList&lt;T&gt; lists = new LinkedList&lt;&gt;();</div><div class="line">final private int MAX = 10; //最多10个元素</div><div class="line">private int count = 0;</div><div class="line"></div><div class="line">private Lock lock = new ReentrantLock();</div><div class="line">private Condition producer = lock.newCondition();</div><div class="line">private Condition consumer = lock.newCondition();</div><div class="line"></div><div class="line">public void put(T t) &#123;</div><div class="line">    try &#123;</div><div class="line">    	lock.lock();</div><div class="line">    	while(lists.size() == MAX) &#123; //想想为什么用while而不是用if？</div><div class="line">    		producer.await();</div><div class="line">    	&#125;</div><div class="line">    	</div><div class="line">    	lists.add(t);</div><div class="line">    	++count;</div><div class="line">    	consumer.signalAll(); //通知消费者线程进行消费</div><div class="line">    &#125; catch (InterruptedException e) &#123;</div><div class="line">    	e.printStackTrace();</div><div class="line">    &#125; finally &#123;</div><div class="line">    	lock.unlock();</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">public T get() &#123;</div><div class="line">	T t = null;</div><div class="line">    try &#123;</div><div class="line">    	lock.lock();</div><div class="line">    	while(lists.size() == 0) &#123;</div><div class="line">    		consumer.await();</div><div class="line">    	&#125;</div><div class="line">    	t = lists.removeFirst();</div><div class="line">    	count --;</div><div class="line">    	producer.signalAll(); //通知生产者进行生产</div><div class="line">    &#125; catch (InterruptedException e) &#123;</div><div class="line">    	e.printStackTrace();</div><div class="line">    &#125; finally &#123;</div><div class="line">    	lock.unlock();</div><div class="line">    &#125;</div><div class="line">	return t;</div><div class="line">&#125;</div><div class="line"></div><div class="line">public static void main(String[] args) &#123;</div><div class="line">	MyContainer2&lt;String&gt; c = new MyContainer2&lt;&gt;();</div><div class="line">	//启动消费者线程</div><div class="line">    for(int i=0; i&lt;10; i++) &#123;</div><div class="line">    	new Thread(()-&gt;&#123;</div><div class="line">    		for(int j=0; j&lt;5; j++) System.out.println(c.get());</div><div class="line">    	&#125;, &quot;c&quot; + i).start();</div><div class="line">    &#125;</div><div class="line">    </div><div class="line">    try &#123;</div><div class="line">    	TimeUnit.SECONDS.sleep(2);</div><div class="line">    &#125; catch (InterruptedException e) &#123;</div><div class="line">    	e.printStackTrace();</div><div class="line">    &#125;</div><div class="line">    </div><div class="line">    //启动生产者线程</div><div class="line">    for(int i=0; i&lt;2; i++) &#123;</div><div class="line">    	new Thread(()-&gt;&#123;</div><div class="line">    		for(int j=0; j&lt;25; j++) c.put(Thread.currentThread().getName() + &quot; &quot; + j);</div><div class="line">    	&#125;, &quot;p&quot; + i).start();</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h4 id="并发容器"><a href="#并发容器" class="headerlink" title="并发容器"></a>并发容器</h4><p>使用并发容器代替加锁的非并发容器。</p>
-<h5 id="几种key-value容器的使用场景："><a href="#几种key-value容器的使用场景：" class="headerlink" title="几种key-value容器的使用场景："></a>几种key-value容器的使用场景：</h5><ol>
-<li>快速存取<key, value="">键值对时可以使用HashMap。</key,></li>
-<li>多线程并发中存取<key, value="">键值对时，可以选择ConcurrentHashMap。ConcurrentHashMa使用分段锁的技术。效率比HashTable效率高。</key,></li>
-<li>当需要存取的键值对有序时可以使用TreeMap。TreeMap保证数据是按照Key的自然顺序或者compareTo方法指定的排序规则进行排序。底层是红黑树实现。</li>
-<li>当需要多线程并发存取<key, value="">数据并且希望保证数据有序时，可以添加lock来实现ConcurrentTreeMap，但是随着并发量的提升，lock带来的性能开销也随之增大。此时可以选择ConcurrentSkipListMap提供了一种线程安全的并发访问的排序映射表。内部是SkipList（跳表）结构实现，在理论上能够O(log(n))时间内完成查找、插入、删除操作。</key,></li>
-</ol>
-<h5 id="写时复制容器CopyOnWriteArrayList"><a href="#写时复制容器CopyOnWriteArrayList" class="headerlink" title="写时复制容器CopyOnWriteArrayList"></a>写时复制容器CopyOnWriteArrayList</h5><p>多线程环境下，写时效率低，读时效率高，适合写少读多的环境。</p>
-<h5 id="Collections-synchronizedList-方法"><a href="#Collections-synchronizedList-方法" class="headerlink" title="Collections.synchronizedList()方法"></a>Collections.synchronizedList()方法</h5><p>可以对某一个对象的方法加锁，但肯定效率也不高。如果Synchronized加锁。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">List&lt;String&gt; strs = new ArrayList&lt;&gt;();</div><div class="line">List&lt;String&gt; strsSync = Collections.synchronizedList(strs);</div></pre></td></tr></table></figure></p>
-<h5 id="并发单向队列ConcurrentLinkedQueue"><a href="#并发单向队列ConcurrentLinkedQueue" class="headerlink" title="并发单向队列ConcurrentLinkedQueue"></a>并发单向队列ConcurrentLinkedQueue</h5><ol>
-<li>提供有返回值的offer()方法，可判断是否添加成功。如果使用add()，如果添加未成功则抛出异常。</li>
-<li>poll()方法表示拿出第一个。peek()也是拿出第一个，但是不删除。</li>
-<li>底层是单向链表实现的无界队列。</li>
-</ol>
-<h5 id="并发双端队列ConcurrentLinkedDeque"><a href="#并发双端队列ConcurrentLinkedDeque" class="headerlink" title="并发双端队列ConcurrentLinkedDeque"></a>并发双端队列ConcurrentLinkedDeque</h5><ol>
-<li>底层是双向列表实现，属于无界队列。</li>
-</ol>
-<h5 id="LinkedBlockingQueue"><a href="#LinkedBlockingQueue" class="headerlink" title="LinkedBlockingQueue"></a>LinkedBlockingQueue</h5><ol>
-<li><p>阻塞式队列，链表实现。使用方法</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">static BlockingQueue&lt;String&gt; strs = new LinkedBlockingQueue&lt;&gt;();</div><div class="line"></div><div class="line">strs.put(&quot;a&quot; + i); //如果满了，就会等待</div><div class="line"></div><div class="line">strs.take()); //如果空了，就会等待</div></pre></td></tr></table></figure>
-</li>
-<li><p>属于无界队列</p>
-</li>
-</ol>
-<h5 id="ArrayBlockingQueue"><a href="#ArrayBlockingQueue" class="headerlink" title="ArrayBlockingQueue"></a>ArrayBlockingQueue</h5><ol>
-<li>属于有界队列，代码如下： <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">static BlockingQueue&lt;String&gt; strs = new ArrayBlockingQueue&lt;&gt;(10);</div><div class="line"></div><div class="line">strs.put(&quot;aaa&quot;); //满了就会等待，程序阻塞</div><div class="line">//strs.add(&quot;aaa&quot;);</div><div class="line">//strs.offer(&quot;aaa&quot;);</div><div class="line">//strs.offer(&quot;aaa&quot;, 1,TimeUnit.SECONDS);//1秒钟之内加不进去就不加了</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<h5 id="DelayQueue"><a href="#DelayQueue" class="headerlink" title="DelayQueue"></a>DelayQueue</h5><ol>
-<li>属于无界队列。是有序的，等待时间最长的排在前面。</li>
-<li>是一个无界的BlockingQueue，用于放置实现了Delayed接口的对象，其中的对象只能在其到期时才能从队列中取走。这种队列是有序的，即队头对象的延迟到期时间最长。注意：不能将null元素放置到这种队列中。</li>
-</ol>
-<h5 id="LinkedTransferQueue"><a href="#LinkedTransferQueue" class="headerlink" title="LinkedTransferQueue"></a>LinkedTransferQueue</h5><ol>
-<li>如果有消费者线程，那么直接将消息送给消费者线程，而不是放在队列里面。</li>
-<li><p>如果没有消费者，使用的是<code>transfer()</code>方法，那么将阻塞在如下代码：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">strs.transfer(&quot;aaa&quot;);</div></pre></td></tr></table></figure>
-<p>如果使用的是<code>add()，put()</code>方法则将加入到队列中。</p>
-</li>
-<li>队列为无界队列。</li>
-</ol>
-<h5 id="没有容量的队列SynchronousQueue"><a href="#没有容量的队列SynchronousQueue" class="headerlink" title="没有容量的队列SynchronousQueue"></a>没有容量的队列SynchronousQueue</h5><p>SynchronousQueue是容量为0的队列，消费者必须马上消费掉，否则出现问题。使用<code>add()</code>方法直接抛出异常，可以使用<code>put（）</code>将会阻塞。</p>
-<h5 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div></pre></td><td class="code"><pre><div class="line">1：对于map/set的选择使用</div><div class="line"></div><div class="line">不需要并发：</div><div class="line">    HashMap</div><div class="line">    TreeMap</div><div class="line">    LinkedHashMap</div><div class="line"></div><div class="line">并发量小：</div><div class="line">    Hashtable</div><div class="line">    Collections.sychronizedXXX</div><div class="line"></div><div class="line">并发量大：</div><div class="line">    ConcurrentHashMap </div><div class="line">并发量大且排序：</div><div class="line">ConcurrentSkipListMap </div><div class="line"></div><div class="line">2：队列</div><div class="line"></div><div class="line">无需并发</div><div class="line">    ArrayList</div><div class="line">    LinkedList</div><div class="line">并发量小：</div><div class="line">    Collections.synchronizedXXX</div><div class="line">    Vector</div><div class="line"></div><div class="line">并发量大</div><div class="line">    写少，读多：</div><div class="line">        CopyOnWriteList</div><div class="line">    Queue</div><div class="line">    	CocurrentLinkedQueue //concurrentArrayQueue</div><div class="line">    	ConcurrentLinkedDeque</div><div class="line">    	BlockingQueue</div><div class="line">    		LinkedBlockingQueue</div><div class="line">    		ArrayBlockingQueue //有界</div><div class="line">    		TransferQueue //可以直接传递给消费者，但会阻塞</div><div class="line">    		SynchronusQueue //容量为0</div><div class="line">    	DelayQueue //执行定时任务，是有序的</div></pre></td></tr></table></figure>
-<h4 id="并发工具类"><a href="#并发工具类" class="headerlink" title="并发工具类"></a>并发工具类</h4><p>常用的并发工具类有<code>CountDownLatch</code>，<code>CyclicBarrier</code>，<code>Semaphore</code>。用于并发流程控制。</p>
-<p>使用Latch（门闩）替代wait notify来进行通知（不需要加锁时，如果是加锁，可能得需要Condition）:</p>
-<ul>
-<li>好处是通信方式简单，同时也可以指定等待时间</li>
-<li>使用await和countdown方法替代wait和notify</li>
-<li>CountDownLatch不涉及锁定，当count的值为零时当前线程继续运行</li>
-<li>当不涉及同步，只是涉及线程通信的时候，用synchronized + wait/notify就显得太重了</li>
-<li>这时应该考虑countdownlatch/cyclicbarrier/semaphore</li>
-</ul>
-<p>区别如下(<a href="http://blog.csdn.net/jackyechina/article/details/52931453" target="_blank" rel="external">转载地址</a>)：</p>
-<ol>
-<li>CountDownLatch 使一个线程A或是组线程A等待其它线程执行完毕后，一个线程A或是组线程A才继续执行。CyclicBarrier：一组线程使用await()指定barrier，所有线程都到达各自的barrier后，再同时执行各自barrier下面的代码。Semaphore：是用来控制同时访问特定资源的线程数量，它通过协调各个线程，以保证合理的使用公共资源。</li>
-<li>CountDownLatch是减计数方式，计数==0时释放所有等待的线程；CyclicBarrier是加计数方式，计数达到构造方法中参数指定的值时释放所有等待的线程。Semaphore，每次semaphore.acquire()，获取一个资源，每次semaphore.acquire(n)，获取n个资源，当达到semaphore 指定资源数量时就不能再访问线程处于阻塞，必须等其它线程释放资源，semaphore.relase()每次资源一个资源，semaphore.relase(n)每次资源n个资源。</li>
-<li>CountDownLatch当计数到0时，计数无法被重置；CyclicBarrier计数达到指定值时，计数置为0重新开始。</li>
-<li>CountDownLatch每次调用countDown()方法计数减一，调用await()方法只进行阻塞，对计数没任何影响；CyclicBarrier只有一个await()方法，调用await()方法计数加1，若加1后的值不等于构造方法的值，则线程阻塞。CyclicBarrier的计数器计数器可以使用reset()方法重置。例如，如果计算发生错误，可以重置计数器，并让线程重新执行一次。</li>
-<li>CountDownLatch、CyclikBarrier、Semaphore 都有一个int类型参数的构造方法。CountDownLatch、CyclikBarrier这个值作为计数用，达到该次数即释放等待的线程，而Semaphore 中所有acquire获取到的资源达到这个数，会使得其它线程阻塞。</li>
-</ol>
-<p>应用场景：</p>
-<ol>
-<li>由于CountDownLatch有个countDown()方法并且countDown()不会引起阻塞，所以CountDownLatch可以应用于主线程等待所有子线程结束后再继续执行的情况。<code>await()</code>方法应用于主线程中。</li>
-<li>由于CyclicBarrier计数达到指定后会重新循环使用，所以CyclicBarrier可以用在所有子线程之间互相等待多次的情形，作用是让所有线程到达一个屏障是被阻塞，直到最后一个线程到达屏障时，屏障才会开门。比如在某种需求中，比如一个大型的任务，常常需要分配好多子任务去执行，只有当所有子任务都执行完成时候，才能执行主任务，这时候，就可以选择CyclicBarrier了。<code>await()</code>方法应用于子线程中，告诉已经到达屏障。</li>
-<li>Semaphore可以用于做流量控制，特别公用资源有限的应用场景，比如数据库连接。示例：<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">public class SemaphoreCase &#123;  </div><div class="line">  </div><div class="line">    private static final int THREAD_COUNT = 30;  </div><div class="line">    private static ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT);  </div><div class="line">    private static Semaphore s = new Semaphore(10);  </div><div class="line">    public static void main(String[] args) &#123;  </div><div class="line">        for (int i = 0; i &lt; THREAD_COUNT; i++) &#123;  </div><div class="line">            threadPool.execute(new Runnable() &#123;  </div><div class="line">                @Override  </div><div class="line">                public void run() &#123;  </div><div class="line">                    try &#123;  </div><div class="line">                        s.acquire();  </div><div class="line">                        System.out.println(&quot;save data&quot;);  </div><div class="line">                        s.release();  </div><div class="line">                    &#125; catch (InterruptedException e) &#123;  </div><div class="line">                    &#125;  </div><div class="line">                &#125;  </div><div class="line">            &#125;);  </div><div class="line">        &#125;  </div><div class="line">        threadPool.shutdown();  </div><div class="line">    &#125;  </div><div class="line">  </div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>注意：</p>
-<ol>
-<li>release函数和acquire并没有要求一定是同一个线程都调用，可以A线程申请资源，B线程释放资源；</li>
-<li>调用release函数之前并没有要求一定要先调用acquire函数。</li>
-</ol>
-<h5 id="线程间交换数据Exchanger"><a href="#线程间交换数据Exchanger" class="headerlink" title="线程间交换数据Exchanger"></a>线程间交换数据Exchanger</h5><p><code>Exchanger</code>用于进行线程间的数据交换。它提供一个同步点，在这个同步点两个线程可以交换彼此的数据。</p>
-<h4 id="Executor框架"><a href="#Executor框架" class="headerlink" title="Executor框架"></a>Executor框架</h4><h5 id="Executor"><a href="#Executor" class="headerlink" title="Executor"></a>Executor</h5><ol>
-<li>Executor是一个接口，它是Executor框架的基础。</li>
-<li>ThreadPoolExecutor是线程池的核心实现类。</li>
-<li>ScheduledThreadPoolExecutor是一个实现类，可以在给定的延迟后运行命令，或是定期执行命令。</li>
-<li>Future接口和实现Future接口的FutureTask类，代表异步计算的结果。</li>
-<li>Runnable接口和Callable接口的实现类，都可以被ThreadPoolExecutor或ScheduledThreadPoolExecutor执行。</li>
-</ol>
-<p>ThreadPoolExecutor通常使用工厂类Executors来创建，可以创建3种ThreadPoolExecutor：</p>
-<ol>
-<li><p>FixedThreadPool.//固定线程数</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">public static ExecutorService newFixedThreadPool(int nThreads) &#123;</div><div class="line">    return new ThreadPoolExecutor(nThreads, nThreads,0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue&lt;Runnable&gt;());</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-<li><p>SingleThreadExecutor.//固定一个线程。</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">public static ExecutorService newSingleThreadExecutor() &#123;</div><div class="line">    return new FinalizableDelegatedExecutorService</div><div class="line">        (new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue&lt;Runnable&gt;()));</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-<li><p>CachedThreadPool.//弹性线程数，空闲线程存活时间默认为60s</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">public static ExecutorService newCachedThreadPool() &#123;</div><div class="line">    return new ThreadPoolExecutor(0, Integer.MAX_VALUE,</div><div class="line">                                  60L, TimeUnit.SECONDS,</div><div class="line">                                  new SynchronousQueue&lt;Runnable&gt;());</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>Executors可以创建2种类型的ScheduledThreadPoolExecutor：</p>
-<ol>
-<li><p>ScheduledThreadPoolExecutor.//默认等待时间最长的先运行</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"> public static ScheduledExecutorService newScheduledThreadPool(int corePoolSize) &#123;</div><div class="line">    return new ScheduledThreadPoolExecutor(corePoolSize);</div><div class="line">&#125;</div><div class="line"></div><div class="line">public ScheduledThreadPoolExecutor(int corePoolSize) &#123;</div><div class="line">    super(corePoolSize, Integer.MAX_VALUE, 0, NANOSECONDS,</div><div class="line">          new DelayedWorkQueue());</div><div class="line">&#125;</div><div class="line"></div><div class="line">public ThreadPoolExecutor(int corePoolSize,</div><div class="line">                          int maximumPoolSize,</div><div class="line">                          long keepAliveTime,</div><div class="line">                          TimeUnit unit,</div><div class="line">                          BlockingQueue&lt;Runnable&gt; workQueue) &#123;</div><div class="line">    this(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue,</div><div class="line">         Executors.defaultThreadFactory(), defaultHandler);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-<li><p>SingleThreadScheduledExecutor.</p>
-</li>
-</ol>
-<h5 id="ExecutorService"><a href="#ExecutorService" class="headerlink" title="ExecutorService"></a>ExecutorService</h5><p>ExecutorService是一个接口，继承了Executor，提供了submit()方法。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">ExecutorService service = Executors.newFixedThreadPool(5);</div><div class="line">service.shutdown();//所有线程跑完才关闭</div><div class="line">service.isShutdown();//马上关闭，不管跑没跑完</div><div class="line">service.isTerminated()；//所有的线程是否都已经执行完了</div><div class="line">service.isShutdown()；//线程池是否已经关闭。任务完成才关闭。</div></pre></td></tr></table></figure></p>
-<h5 id="Executors"><a href="#Executors" class="headerlink" title="Executors"></a>Executors</h5><p>Executors是一个工具类。</p>
-<h5 id="FutureTask"><a href="#FutureTask" class="headerlink" title="FutureTask"></a>FutureTask</h5><p>FutureTask实现Future接口和Runnable接口，可以得到一个线程返回值。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">FutureTask&lt;Integer&gt; task = new FutureTask&lt;&gt;(()-&gt;&#123;</div><div class="line">    TimeUnit.MILLISECONDS.sleep(500);</div><div class="line">    return 1000;</div><div class="line">&#125;); //new Callable () &#123; Integer call();&#125;</div><div class="line"></div><div class="line">new Thread(task).start();</div><div class="line"></div><div class="line">System.out.println(task.get()); //阻塞</div></pre></td></tr></table></figure></p>
-<h5 id="WorkStealingPool"><a href="#WorkStealingPool" class="headerlink" title="WorkStealingPool"></a>WorkStealingPool</h5><p>WorkStealingPool会主动地拉取任务。会根据CPU的核数产生一样的线程数。WorkStealingPool的线程是daemon线程。是通过new ForkJoinPool来实现的，是对ForkJoinPool进行了封装。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line">public class T11_WorkStealingPool &#123;</div><div class="line">	public static void main(String[] args) throws IOException &#123;</div><div class="line">		ExecutorService service = Executors.newWorkStealingPool();</div><div class="line">		System.out.println(Runtime.getRuntime().availableProcessors());</div><div class="line"></div><div class="line">		service.execute(new R(1000));</div><div class="line">		service.execute(new R(2000));</div><div class="line">		service.execute(new R(2000));</div><div class="line">		service.execute(new R(2000)); //daemon</div><div class="line">		service.execute(new R(2000));</div><div class="line">		</div><div class="line">		//由于产生的是精灵线程（守护线程、后台线程），主线程不阻塞的话，看不到输出</div><div class="line">		System.in.read(); </div><div class="line">	&#125;</div><div class="line"></div><div class="line">	static class R implements Runnable &#123;</div><div class="line"></div><div class="line">		int time;</div><div class="line"></div><div class="line">		R(int t) &#123;</div><div class="line">			this.time = t;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		@Override</div><div class="line">		public void run() &#123;</div><div class="line">			</div><div class="line">			try &#123;</div><div class="line">				TimeUnit.MILLISECONDS.sleep(time);</div><div class="line">			&#125; catch (InterruptedException e) &#123;</div><div class="line">				e.printStackTrace();</div><div class="line">			&#125;</div><div class="line">			</div><div class="line">			System.out.println(time  + &quot; &quot; + Thread.currentThread().getName());</div><div class="line">			</div><div class="line">		&#125;</div><div class="line"></div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h5 id="ForkJoinPool"><a href="#ForkJoinPool" class="headerlink" title="ForkJoinPool"></a>ForkJoinPool</h5><p>一个用于并行执行任务的框架，是一个把大任务分割成若干个小任务，最终汇总每个小任务结果后得到大任务结果的框架。ForkJoinPool的线程是精灵线程。</p>
-<p>如果任务执行类继承的是RecursiveAction，那么没有返回值，如果是RecursiveTask则可以返回结果用于汇总。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> Java </category>
-            
-            <category> 并发 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 并发 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[记一次combogrid使用的采坑经历]]></title>
-      <url>/2017/11/27/%E8%AE%B0%E4%B8%80%E6%AC%A1combogrid%E4%BD%BF%E7%94%A8%E7%9A%84%E9%87%87%E5%9D%91%E7%BB%8F%E5%8E%86/</url>
-      <content type="html"><![CDATA[<h4 id="缘由"><a href="#缘由" class="headerlink" title="缘由"></a>缘由</h4><p>项目需要combogrid来实现下拉列表，并且实现select下拉框刷选下拉列表内容的功能。查了官方文档，好像没有介绍combogrid添加toolbar的例子，但是看到combogrid继承了combo和datagrid，那好，应该是可以使用。</p>
-<h4 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h4><p>combogrid成功添加了toolbar实现了相关功能。但是问题来了。</p>
-<ol>
-<li>当我切换到别的页面，再切回来时，发现toolbar的select框选择无效了，筛选的参数是上一次最后操作的参数，只能刷新整个浏览器页面才能生效。</li>
-<li>当我切换到别的页面时，按F12输入<code>$(&quot;#tb&quot;)</code>竟然生效，id为tb的div竟然成了全局div。当输入<code>$(&quot;[id=tb]&quot;).length</code>是返回的结果不只是1，会随着切换次数的增加加1。</li>
-<li>当我连着初始化combogrid两次是，toolbar竟然出现了一模一样的两个。</li>
-</ol>
-<p>为什么出现这种问题，由于本人前端水平有限，一时半会也找不出答案，只能简单暴力地解决问题！</p>
-<h4 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h4><ol>
-<li>初始化两次combogrid，使得出现两处toolbar。如果只是初始化一次那么toolbar只是出现一次，但是<code>[id=tb]&quot;).length</code>的长度还是会大于1，实际上可删除的id为tb的div只有一处，那么再删掉就没意义了。</li>
-<li>连续两次初始化完之后，接着加入以下逻辑 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">   init : function() &#123;</div><div class="line">	// 初始化账期控件，注意：必须初始化两次</div><div class="line">	initComboBoGrid();</div><div class="line">	initComboBoGrid();</div><div class="line">	$(&quot;[id=tb]&quot;).each(function(index,element)&#123;</div><div class="line">		if(0 != index)&#123;</div><div class="line">			element.remove();</div><div class="line">		&#125;</div><div class="line">	&#125;);</div><div class="line">	$(&quot;#tb&quot;).show();</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>没办法，只能简单暴力解决！</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> 前端 </category>
-            
-            <category> js </category>
-            
-            <category> EasyUI </category>
-            
-            <category> Combo </category>
-            
-            <category> Datagrid </category>
-            
-            <category> Combogrid </category>
-            
-            <category> 问题 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> js </tag>
-            
-            <tag> EasyUI </tag>
-            
-            <tag> Combo </tag>
-            
-            <tag> Datagrid </tag>
-            
-            <tag> Combogrid </tag>
-            
-            <tag> 问题 </tag>
-            
-            <tag> 前端 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Java中返回一年中某一周的第一天]]></title>
-      <url>/2017/11/25/Java%E4%B8%AD%E8%BF%94%E5%9B%9E%E4%B8%80%E5%B9%B4%E4%B8%AD%E6%9F%90%E4%B8%80%E5%91%A8%E7%9A%84%E7%AC%AC%E4%B8%80%E5%A4%A9/</url>
-      <content type="html"><![CDATA[<p>实现这样一个功能，根据前端的日历组件向后台传回某一年的第几周的开始日期和结束日期，日历组件的展示的日历周是以周日开始周六结束。<br>但是当直接设置Java中Calendar对象中的年数和周数时，返回这一周第一天（周日）的日期总是对不上。后来经过同事的帮忙总与解决了，代码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">// 获取某一周的起始时间</div><div class="line">	public static Calendar getFirstDayOfWeek(int year, int week) &#123;</div><div class="line"></div><div class="line">		Calendar firDay = Calendar.getInstance();</div><div class="line"></div><div class="line">		//firDay.setFirstDayOfWeek(Calendar.SUNDAY);</div><div class="line">		// 先滚动到该年</div><div class="line">		firDay.set(Calendar.YEAR, year);</div><div class="line">		// 滚动到周</div><div class="line">		firDay.set(Calendar.WEEK_OF_YEAR, week - 1);</div><div class="line">		</div><div class="line">		firDay.set(Calendar.DAY_OF_WEEK, 0);</div><div class="line">		//1天</div><div class="line">		firDay.add(Calendar.DAY_OF_YEAR, +1);</div><div class="line">		return firDay;</div><div class="line">	&#125;</div></pre></td></tr></table></figure></p>
-]]></content>
-      
-        <categories>
-            
-            <category> Java </category>
-            
-            <category> Calendar </category>
-            
-            <category> 问题 </category>
-            
-            <category> 后台 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 问题 </tag>
-            
-            <tag> Calendar </tag>
-            
-            <tag> 后台 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[EasyUI layer.tips位置出错问题解决]]></title>
-      <url>/2017/11/16/EasyUI-layer-tips%E4%BD%8D%E7%BD%AE%E5%87%BA%E9%94%99%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3/</url>
-      <content type="html"><![CDATA[<h4 id="EasyUI-layer-tips位置出错问题解决"><a href="#EasyUI-layer-tips位置出错问题解决" class="headerlink" title="EasyUI layer.tips位置出错问题解决"></a>EasyUI layer.tips位置出错问题解决</h4><p>当在划出窗口或是弹出面板中使用layer.tips时，老是出现tips位置错误的问题。感觉是给layer.tips提供的id位置应该不是当前窗口或是面板的上的id。</p>
-<p>在同事的建议下直接把当前对象的<code>this</code>参数传进来单做id，这样就解决问题了。代码片段如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">operation =  &apos;&lt;a href=&quot;javascript:;&quot; class=&quot;btn btn-link btn-xs&quot; onmouseover=&quot;showTestTooltip(\&apos;&apos;</div><div class="line">				+ tipStr + &quot;&apos;,&apos;&quot; + row.id +&apos;\&apos;,this);&quot; onmouseout=&quot;hideTestTooltip(this);&quot;&gt;&apos;</div><div class="line">				+ &quot;tip&quot; + &apos;&lt;/a&gt;&apos;;</div><div class="line">		return operation;</div></pre></td></tr></table></figure></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">showTestTooltip : function(tipStr, id, thiz) &#123;</div><div class="line">		testTooltip = layer.tips(</div><div class="line">                &apos;&lt;font size=&quot;2&quot;&gt;&apos;+ tipStr + &apos;&lt;/font&gt;&apos;,</div><div class="line">                thiz, &#123;</div><div class="line">                    tips : [ 3, &apos;#3595CC&apos; ],</div><div class="line">                    time : 0,</div><div class="line">                    area : &apos;auto&apos;,</div><div class="line">                    maxWidth : 500,</div><div class="line">                    zIndex:999999</div><div class="line">                &#125;);</div><div class="line">    &#125;,</div></pre></td></tr></table></figure>
-<p>由于本人前端水平有限，不知道为啥这样，但至少能够解决问题，还请大家指教！！！</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> 前端 </category>
-            
-            <category> js </category>
-            
-            <category> EasyUI </category>
-            
-            <category> JQuery </category>
-            
-            <category> 问题 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> js </tag>
-            
-            <tag> EasyUI </tag>
-            
-            <tag> Combo </tag>
-            
-            <tag> Datagrid </tag>
-            
-            <tag> Combogrid </tag>
-            
-            <tag> 问题 </tag>
-            
-            <tag> 前端 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[使用easyUI组件combogrid面板相关问题]]></title>
-      <url>/2017/11/15/%E4%BD%BF%E7%94%A8easyUI%E7%BB%84%E4%BB%B6combogrid%E9%9D%A2%E6%9D%BF%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98/</url>
-      <content type="html"><![CDATA[<h4 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h4><p>使用combogrid组件时，弹出的面板宽度总是与数据框的长度一样，并不是想官方demo那样弹出理想的宽度。各种属性各种设置也没解决问题，网上找了好久也没有找到答案。</p>
-<h4 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h4><p>后来继续翻官方demo，发现了一个属性，试了一下成功了。属性如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">panelMinWidth : &apos;50%&apos;,</div></pre></td></tr></table></figure></p>
-<p>还得加入<code>fix:true,</code>属性，使得表格大小与面板一致<br>设置值为：<code>50%</code>。</p>
-<h4 id="下来面板中加入输入框"><a href="#下来面板中加入输入框" class="headerlink" title="下来面板中加入输入框"></a>下来面板中加入输入框</h4><p>因为combogrid继承combo以及datagrid，因此可是使用combo以及datagrid的特性。通过”toolbar”属性可以引入输入框形成组合查询。</p>
-<p><em>注意问题</em>：在Firefox浏览器中可能会出现数据框加载显示效果问题，可以先默认隐藏输入框，再在列表初始化函数中通过js显示该输入框。</p>
-<h4 id="设置默认选中第一行"><a href="#设置默认选中第一行" class="headerlink" title="设置默认选中第一行"></a>设置默认选中第一行</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">onLoadSuccess:function()&#123;</div><div class="line">	//默认选中第一行      </div><div class="line">	$(&apos;#billingReport_InvoiceTermComboBoxId&apos;).combogrid(&apos;grid&apos;).datagrid(&apos;selectRow&apos;,0);;</div><div class="line">	&#125;,</div></pre></td></tr></table></figure>]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> 前端 </category>
-            
-            <category> js </category>
-            
-            <category> EasyUI </category>
-            
-            <category> Combo </category>
-            
-            <category> Datagrid </category>
-            
-            <category> Combogrid </category>
-            
-            <category> 问题 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> js </tag>
-            
-            <tag> EasyUI </tag>
-            
-            <tag> Combo </tag>
-            
-            <tag> Datagrid </tag>
-            
-            <tag> Combogrid </tag>
-            
-            <tag> 问题 </tag>
-            
-            <tag> 前端 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[记一次tomcat崩溃问题排查过程]]></title>
-      <url>/2017/11/10/%E8%AE%B0%E4%B8%80%E6%AC%A1tomcat%E5%B4%A9%E6%BA%83%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B/</url>
-      <content type="html"><![CDATA[<p>产品在生产环境中跑了一段时间后，每天早晨运维人员都会发现程序崩溃，无法提供服务，重启之后就好了，而且白天都没问题，运维人员因此叫苦连天。</p>
-<p>查看日志发现有堆内存溢出的提示，并且都是发生在凌晨一点钟左右，但找不到是哪个线程导致的，重启之后通过jstack、jmap、jstat等命令查看各项指标都正常。无奈只能在<code>catalina.sh</code>配置文件中加入<code>JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/.../oom.hprof&quot;</code>配置项，当程序因为内存溢出崩溃时能够查看当时的jvm内存使用情况。</p>
-<p>隔天早上再次发生崩溃，产生了<code>oom.hprof</code>文件，让运维人员传过来，导入<code>MemoryAnalyzer</code>中进行分析。分析过程中发现某个定时任务的线程对象占用了将近一半的堆内存，并且对象类型为：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div></pre></td><td class="code"><pre><div class="line">java.lang.Object[4102267] @ 0xe817b3f0</div><div class="line"> 16,409,088 864,074,952 48.56% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb0176c20</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xe3044560</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xce6ac738</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xaf2ab198</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xa82fbcc0</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xcbce65f8</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb1b9e200</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb515f4a0</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xde9fab68</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xac3662a8</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xd3b9e6f8</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xe3044690</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xa51149a8</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xafc57d70</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0x8f536ab0</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xd6bb6588</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb0d39428</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0x98c5da88</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xb2de5950</div><div class="line"> 24 304 0.00% </div><div class="line">..+com.mysql.jdbc.ByteArrayRow @ 0xde9fac98</div></pre></td></tr></table></figure>
-<p>通过在网上搜索答案，初步猜测是一次从数据库中读取了大量的数据到内存中导致内存溢出的崩溃问题。接着查看线程栈，定位到了线程中导致问题的某一处代码。</p>
-<p>这一处代码做的是一个根据条件定期删除数据库的操作，这是经过本地调试发现每次做删除操作时并没有报异常，但也没删除成功。此时可以了解了问题发生的原因，由于此每次都没能成功删除数据，但是还会有新数据不断加入，日积月累数据量会越来越庞大。每次做删除操作时JPA预先加载所有要删除的数据到内存中，这时大数据量会导致JVM实例堆溢出崩溃。</p>
-<p>定位到问题代码之后要分析一下为什么没有成功删除数据。这里要先说一下，我们项目中使用的是spring boot，持久层api使用的是spring data jpa。通过分析发现代码中没有在service层的实现类或是相关方法上加<code>@transactional</code>，导致的删除数据时事务不生效。</p>
-<p>但是当我给service层实现类加上<code>@transactional</code>时，删除数据仍然不成功，分析代码发现，他这个service层实现类不但有implements接口，还extends抽象类，并不是纯碎的接口实现，即使直接加在方法上也不行，为什么不成功我暂时还没有时间去研究。无奈只能在repository层加，操作才成功，显然这种方法很不好！没办法，先交给代码关系人来解决吧，我也没时间和精力！</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 问题排查 </tag>
-            
-            <tag> OutOfMemoryError </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Java应用排查笔记]]></title>
-      <url>/2017/11/07/Java%E5%BA%94%E7%94%A8%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E7%AC%94%E8%AE%B0/</url>
-      <content type="html"><![CDATA[<p>前一段时间跑在tomcat的java应用出现线程挂掉，CPU占用率持续过高，堆溢出的问题。首先说一下这件事的经过。</p>
-<p>我在我的模块中有两个定时任务，使用的是spring boot的注解<code>@Scheduled(fixedDelay=ONE_Minute)</code>，后来出现这了两个定时任务都不再往redis缓存里面存放数据的问题。一开始没有经验，也没有打印足够的日志，所以从日志里面也看不出啥问题。</p>
-<p>后来，我去除掉了定时任务，改成了直接new线程的方式（这种方式当然不好），并且详细打上了日志。但又出现问题了，但可喜的是这两个线程中只有一个不工作了（就是不缓存数据了，具体问题也不清楚），另外一个还很正常。这种情况出现了2到3次，我这时候还是束手无策，不知为何？</p>
-<p>我继续在网上搜索答案，说是用<code>jps</code>,<code>jstat</code>,<code>jinfo</code>,<code>jmap</code>,<code>jhat</code>,<code>jstack</code>这些命令可以做故障分析。下面是使用的过程。</p>
-<p>首相使用<code>jps</code>查询运行tomcat的JVM虚拟机的进程：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">jps</div></pre></td></tr></table></figure>
-<p>得到一下结果：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">2667 Bootstrap</div><div class="line">3116 Jps</div></pre></td></tr></table></figure>
-<p>其中<code>Bootstrap</code>代表的<code>2667</code>就是tomcat java虚拟机的进程号。有时候使用<code>jps</code>命令无法得到类似<code>2667 Bootstrap</code>的结果(好像重启tomcat之后好使)，那么可用<code>ps -ef | grep tomcat</code>得到进程号。</p>
-<h4 id="判断线程状态"><a href="#判断线程状态" class="headerlink" title="判断线程状态"></a>判断线程状态</h4><p>首先通过<code>jstack -l pid</code>来查看所有的线程栈,若果调用失败可使用<code>stack -F pid</code>强制导出。通过导出的线程堆栈信息来判断线程的状态，是否还存在？如果存在的话，处于什么状态？</p>
-<h4 id="判断Java进程为何CPU占用率高"><a href="#判断Java进程为何CPU占用率高" class="headerlink" title="判断Java进程为何CPU占用率高"></a>判断Java进程为何CPU占用率高</h4><p>可通过<code>ps -Lfp pid</code>或者<code>ps -mp pid -o THREAD, tid, time</code>或者<code>top -Hp pid</code>来判断java进程中哪个线程的CPU占用过高。</p>
-<p>确定了线程的id之后，再通过<code>jstack -l pid</code>打印出的信息查看对应的线程的堆栈，确认线程的工作状态。参考链接：<a href="https://my.oschina.net/feichexia/blog/196575" target="_blank" rel="external">https://my.oschina.net/feichexia/blog/196575</a></p>
-<h4 id="判断OutOfMemoryError问题"><a href="#判断OutOfMemoryError问题" class="headerlink" title="判断OutOfMemoryError问题"></a>判断OutOfMemoryError问题</h4><p>当发生<code>OutOfMemoryError</code>时希望把当时的内存数据保存下来以便于使用可视化工具（eclipse memory analyzer ）分析，可以在tomcat bin下的catalina.sh文件中加入相关参数。添加位置如下：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">fi</div><div class="line"></div><div class="line"># ----- Execute The Requested Command -----------------------------------------</div><div class="line"></div><div class="line">JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/cloudview/data/dump/oom.hprof&quot;</div><div class="line"></div><div class="line"># Bugzilla 37848: only output this if we have a TTY</div><div class="line">if [ $have_tty -eq 1 ]; then</div></pre></td></tr></table></figure>
-<p><code>-XX:HeapDumpPath=/cloudview/data/dump/oom.hprof</code>表示文件保存的路径以格式。</p>
-<p>发生<code>OutOfMemoryError</code>可能会导致线程异常终止，可用<code>catch Throwable</code>捕捉并打印最后的堆栈信息。另外不建议单独使用new线程的方式，可使用线程池来保证重启线程。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 问题排查 </tag>
-            
-            <tag> OutOfMemoryError </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第13章 线程安全与锁优化]]></title>
-      <url>/2017/11/04/%E7%AC%AC13%E7%AB%A0-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E4%B8%8E%E9%94%81%E4%BC%98%E5%8C%96/</url>
-      <content type="html"><![CDATA[<h4 id="线程安全"><a href="#线程安全" class="headerlink" title="线程安全"></a>线程安全</h4><h5 id="Java语言中的线程安全"><a href="#Java语言中的线程安全" class="headerlink" title="Java语言中的线程安全"></a>Java语言中的线程安全</h5><p>我们可以将java语言中各种操作共享的数据分为以下5类：</p>
-<ol>
-<li>不可变：1 final关键字修饰的变量（没有发生this引用逃逸的情况）；2 Java.lang.String类的对象，调用它的方法是只会返回一个新构造的字符串对象；3 枚举类型；4 Long和Double等数值包装类型；</li>
-<li>绝对线程安全：Java API中标注自己是线程安全的类，大多数都不是绝对的线程安全；</li>
-<li>相对线程安全：相对的线程安全就是我们通常意义上所讲的线程安全，它需要保证对这个对象单独的操作是线程安全的。Vector、HashTable、Collections的synchronizedCollection()方法包装的集合等都属于这种类型；</li>
-<li>线程兼容；</li>
-<li>线程对立；</li>
-</ol>
-<h5 id="线程安全的实现方法"><a href="#线程安全的实现方法" class="headerlink" title="线程安全的实现方法"></a>线程安全的实现方法</h5><h6 id="1-互斥同步"><a href="#1-互斥同步" class="headerlink" title="1. 互斥同步"></a>1. 互斥同步</h6><p>Java中，最基本的互斥同步手段就是synchronized关键字。首先synchronized同步块对同一条线程来说是可以重入的，不会出现自己把自己锁死的问题；其次，同步块在已进入的线程执行完之前，会阻塞后面其他线程的进入。</p>
-<p>除了synchronized之外，我们还可以使用java.util.concurrent包中的重入锁（ReentrantLock）来实现同步。</p>
-<p>ReentrantLock增加的高级功能：</p>
-<ol>
-<li>等待可中断</li>
-<li>可实现公平锁</li>
-<li>锁可以绑定多个条件</li>
-</ol>
-<h6 id="2-非阻塞同步"><a href="#2-非阻塞同步" class="headerlink" title="2. 非阻塞同步"></a>2. 非阻塞同步</h6><h6 id="3-无同步方案"><a href="#3-无同步方案" class="headerlink" title="3. 无同步方案"></a>3. 无同步方案</h6><ol>
-<li>可重入代码</li>
-<li>线程本地存储</li>
-</ol>
-<h4 id="锁优化"><a href="#锁优化" class="headerlink" title="锁优化"></a>锁优化</h4><ol>
-<li>自旋锁与自适应自旋</li>
-<li>消除锁</li>
-<li>锁粗化</li>
-<li>轻量级锁</li>
-<li>偏向锁</li>
-</ol>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第12章 Java内存模型与线程]]></title>
-      <url>/2017/11/04/%E7%AC%AC12%E7%AB%A0-Java%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%BA%BF%E7%A8%8B/</url>
-      <content type="html"><![CDATA[<p>“内存模型”可以理解为在特定的操作协议下对特定的内存或高速缓存进行读写访问的过程抽象。</p>
-<h4 id="Java内存模型"><a href="#Java内存模型" class="headerlink" title="Java内存模型"></a>Java内存模型</h4><h5 id="1-主内存与工作内存"><a href="#1-主内存与工作内存" class="headerlink" title="1 主内存与工作内存"></a>1 主内存与工作内存</h5><p>Java内存模型的主要目标是定义程序中各个变量的访问规则，即在虚拟机中将变量存储到内存和从内存中取出变量这样的底层细节。此处的变量与Java编程中所说的变量有所区别，它包括了实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不会被共享，自然就不会存在竞争问题。</p>
-<p>工作过程：所有的变量都存储在主内存中。每条线程还有自己的工作内存（属于线程私有，类似处理器的高速缓存），线程的工作内存中保存了被该线程使用到的变量的主内存副本拷贝，线程对变量的所有操作都必须在工作内存中进行，而不能直接读写主内存中的变量，线程间变量值的传递均需要通过主内存来完成。</p>
-<h5 id="2-内存间交互操作"><a href="#2-内存间交互操作" class="headerlink" title="2 内存间交互操作"></a>2 内存间交互操作</h5><p>Java内存模型中定义了一下8种操作来完成主内存和工作内存间的交互操作，虚拟机实现时必须保证下面提及的每一种操作都是原子的、不可再分的。</p>
-<ol>
-<li>lock</li>
-<li>unlock</li>
-<li>read</li>
-<li>load</li>
-<li>use</li>
-<li>assign</li>
-<li>store</li>
-<li>write</li>
-</ol>
-<h5 id="3-对于volatile型变量的特殊规则"><a href="#3-对于volatile型变量的特殊规则" class="headerlink" title="3 对于volatile型变量的特殊规则"></a>3 对于volatile型变量的特殊规则</h5><p>在各个线程的工作内存中，volatile变量也可以存在不一致的情况，但是由于每次使用前都要先<strong>刷新</strong>，执行引擎看不到不一致的情况。</p>
-<p>Java里面的运算并非原子操作，导致volatile变量的运算在并发下一样是不安全的。</p>
-<p><strong>使用volatile变量第一是保证此变量对所有线程的可见性。</strong></p>
-<p>volatile变量不安全场景：</p>
-<ol>
-<li>多线程并发对volatile变量 i++;</li>
-</ol>
-<p>由于volatile变量只能保证可见性，在不符合一下两条规则的运算场景中，我们仍然要通过加锁（使用synchronized或java.util.concurrent中的原子类）来保证原子性。</p>
-<ol>
-<li>运算结果并不依赖变量的当前值，或者能够确保只有单一的线程修改变量的值；</li>
-<li>变量不需要与其他的状态变量共同参与不变约束。</li>
-</ol>
-<p>volatile适用场景：</p>
-<ol>
-<li><p><strong>使用volatile变量的第二个语义是禁止指令重排序优化。</strong></p>
-</li>
-</ol>
-<p>选用volatile的意义：大多数场景下volatile的总开销仍然要比锁低，我们在volatile与锁之中选择的唯一依据仅仅是volatile的语义能否满足使用场景的需求。</p>
-<h5 id="4-对于long和double型变量的特殊规则"><a href="#4-对于long和double型变量的特殊规则" class="headerlink" title="4 对于long和double型变量的特殊规则"></a>4 对于long和double型变量的特殊规则</h5><p>目前各平台下的商用虚拟机几乎都选择把64位数据的读写操作作为原子操作来对待，因此我们在编写代码时一般不需要把用的long和double变量专门声明为volatile。</p>
-<h5 id="4-原子性、可见性与有序性"><a href="#4-原子性、可见性与有序性" class="headerlink" title="4 原子性、可见性与有序性"></a>4 原子性、可见性与有序性</h5><p>原子性：由Java内存模型来直接保证的原子性操作包括read、load、assign、use、store和write，我们大致可以认为基本数据类型的访问读写是具备原子性的（long和double的非原子协定几乎不会发生例外情况）</p>
-<p>可见性：可见性是指当一个线程修改了共享变量的值，其他线程能够立即得知这个修改。除了volatile之外，synchronized和final也能实现可见性。同步块的可见性是由“对一个变量执行unlock操作之前，必须把此变量同步回到主内存中”这条规则获得的，而final关键字的可见性是指：被final修饰的字段在构造器中一旦初始化完成，并且构造器没有把“this”的引用传递出去，那在其他线程中就能看见final字段的值。</p>
-<p>有序性：Java语言提供了volatile和synchronized两个关键字来保证线程之间操作的有序性，volatile关键字本身就包含了禁止指令重排序的语义，而synchronized的锁操作决定了持有同一个锁的两个同步块只能串行地进入。</p>
-<p>Java程序中天然的有序性可以总结为一句话：如果在本线程内观察，所有的操作都是有序的；如果在一个线程中观察另一个线程，所有的操作都是无序的。前半句是指“线程内表现为串行的语义”，后半句是指“指令重排序”线程和“工作内存与主内存同步延迟”现象。</p>
-<h5 id="6-先行发生原则"><a href="#6-先行发生原则" class="headerlink" title="6 先行发生原则"></a>6 先行发生原则</h5><p>Java内存模型下一些“天然的“先行发生关系，这些先行发生关系无须任何同步器协助就已经存在，可以在编码中直接使用。</p>
-<ol>
-<li>程序次序规则</li>
-<li>管道锁定规则</li>
-<li>volatile变量规则</li>
-<li>线程启动规则</li>
-<li>线程终止规则</li>
-<li>线程中断规则</li>
-<li>对象终结规则</li>
-<li>传递性</li>
-</ol>
-<h4 id="Java与线程"><a href="#Java与线程" class="headerlink" title="Java与线程"></a>Java与线程</h4><h5 id="java线程的实现"><a href="#java线程的实现" class="headerlink" title="java线程的实现"></a>java线程的实现</h5><p>对于Sun JDK来说，它的Windows版与Linux版都是使用一对一的线程模型实现的，一条Java线程就映射到一条轻量级进程之中。</p>
-<h4 id="Java线程调度"><a href="#Java线程调度" class="headerlink" title="Java线程调度"></a>Java线程调度</h4><p>调度方式有两种：</p>
-<ol>
-<li>协同式线程调度</li>
-<li>抢占式线程调度</li>
-</ol>
-<h4 id="状态转换"><a href="#状态转换" class="headerlink" title="状态转换"></a>状态转换</h4><p>Java定义了5中线程状态</p>
-<ol>
-<li>新建（NEW）</li>
-<li>运行（Runable）：Runable包括操作系统线程状态中的Running和Ready。</li>
-<li>无期限等待（Waiting）</li>
-<li>期限等待（Timed Waiting）</li>
-<li>阻塞（Blocked）</li>
-<li>结束（Terminated）</li>
-</ol>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[解决JavaMail邮件出现base64乱码的问题]]></title>
-      <url>/2017/11/04/%E8%A7%A3%E5%86%B3JavaMail%E9%82%AE%E4%BB%B6%E5%87%BA%E7%8E%B0base64%E4%B9%B1%E7%A0%81%E7%9A%84%E9%97%AE%E9%A2%98/</url>
-      <content type="html"><![CDATA[<h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>本机进行邮件发送没出现问题，但是放到某些linux环境中则出现邮件内容是现实base编码的问题：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">------=_Part_3_2039075268.1524573999534</div><div class="line">Content-Type: text/html; charset=utf-8</div><div class="line">Content-Transfer-Encoding: base64</div><div class="line"> </div><div class="line">PHA+5ZGK6K2m5L+h5oGv5aaC5LiL77yaPGJyPumhueebriAmbmJzcDsgJm5ic3A7ICZuYnNwOyAm</div><div class="line">bmJzcDsgJm5ic3A7ICZuYnNwOyAmbmJzcDvkv6Hmga88YnI+5ZGK6K2m5a6e5L2TIO+8mndpbmRv</div><div class="line">d3Nf57qz566h5rWL6K+VPGJyPuWRiuitpuWQjeensCDvvJromZrmi5/mnLrnm67lvZXkuI3kuIDo</div><div class="line">h7Q8YnI+5ZGK6K2mSUQgJm5ic3A7ICZuYnNwOyDvvJpjbS1hbGFybS0xMDxicj7lkYrorabmj4/o</div><div class="line">v7Ag77ya6Jma5ouf5py6ICB3aW5kb3dzX+e6s+euoea1i+ivleW3sue7j+iiq+enu+iHs+aWh+S7</div><div class="line">tuWkuSB2bSE8YnI+5ZGK6K2m57qn5YirIO+8muS4pemHjeWRiuitpjxicj7lkYrorabml7bpl7Qg</div><div class="line">77yaMjAxOC0wNC0yNCAyMDo0NToyOTxicj48YnI+5aaC5pyJ55aR6Zeu77yM6K+35LiO57O757uf</div><div class="line">566h55CG5ZGY6IGU57O744CCPC9wPg==</div><div class="line">------=_Part_3_2039075268.1524573999534--</div></pre></td></tr></table></figure></p>
-<p>一开始以为是编码没设置好，但是本地测试或是在某些linux环境中测试都没问题。</p>
-<a id="more"></a>
-<h3 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h3><p>后来通过网上寻找答案，发现其实是环境中引入了无用的包，使得包冲突导致，连接如下：</p>
-<p><a href="http://yanghengtao.iteye.com/blog/1924276" target="_blank" rel="external">javamail 发送邮件 内容乱码问题的解决</a></p>
-<p><a href="http://jeyke.iteye.com/blog/1441548" target="_blank" rel="external">spring mail 发送邮件，没有主题，没有收件人，显示乱码问题</a></p>
-<p>引入的多余jar包如下：<br><img src="https://note.youdao.com/yws/public/resource/92d9bb9b2b48a12e9ca04faaf8368cd6/xmlnote/67976E0A5CDE450E8E981492CCE25620/9342" alt="image"></p>
-<p><em>解决方法</em>：将此jar包删除即可！</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> JavaMail </tag>
-            
-            <tag> base64 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hyper-V之WMI、J-Interop]]></title>
-      <url>/2017/11/03/Hyper-V%E4%B9%8BWMI%E3%80%81J-Interop/</url>
-      <content type="html"><![CDATA[<h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>经过调研发现要通过调用WMI接口来实现对Hyper-V的管理，由于之前没有相关的经验所以通过网上搜索来理解什么是WMI。</p>
-<p>关于使用何种编程语言调用WMI，微软官网给出的是封装很友好的c#和powershell脚本接口，但目前公司的开发语言主要为Java，所以经过调研是能使用J-Interop。J-Interop是一个基于Java语言的WMI封装库，但是用方式还是太过于原始，使用上不是很友好，还得需要进一步封装，当然这一部分不在本文的编写范围内。</p>
-<h3 id="什么是WMI？"><a href="#什么是WMI？" class="headerlink" title="什么是WMI？"></a>什么是WMI？</h3><p>官网介绍是：</p>
-<p>Windows Management Instrumentation (WMI) is the Microsoft implementation of Web-Based Enterprise Management (WBEM), which is an industry initiative to develop a standard technology for accessing management information in an enterprise environment. WMI uses the Common Information Model (CIM) industry standard to represent systems, applications, networks, devices, and other managed components. CIM is developed and maintained by the Distributed Management Task Force (DMTF). <a href="https://msdn.microsoft.com/en-us/library/aa384642(v=vs.85" target="_blank" rel="external">About WMI</a>.aspx)</p>
-<p>以下WMI相关的内容转载自：<a href="http://blog.csdn.net/ilovepxm/article/details/6690224" target="_blank" rel="external">http://blog.csdn.net/ilovepxm/article/details/6690224</a></p>
-<h3 id="WMI的组成？"><a href="#WMI的组成？" class="headerlink" title="WMI的组成？"></a>WMI的组成？</h3><p>严格说来，WMI由四部分组成：</p>
-<ol>
-<li>公共信息模型对象管理器——CIMOM</li>
-<li>公共信息模型——CIM</li>
-<li>WMI提供程序</li>
-<li>WMI脚本对象库<br>其中其第1、2、3三个部分，在使用中很少加以区别，我们一般统称为CIM库。<br>用WMI脚本对象库访问cim库。<br>本质：是一个带很多分支的树状数据库，是一项服务！</li>
-</ol>
-<h3 id="WMI能做什么？"><a href="#WMI能做什么？" class="headerlink" title="WMI能做什么？"></a>WMI能做什么？</h3><p>利用WMI可以高效地管理远程和本地的计算机.WMI是WBEM模型的一种实现。</p>
-<p>WBEM模型最关键的部分是它的数据模型（或描述和定义对象的方式）、编码规范（Encoding Specification），以及在客户端和服务器端之间传输数据的模式。<br>CIM即WBEM的数据模型！</p>
-<p>CIM是一个用来命名计算机的物理和逻辑单元的标准的命名系统（或称为命名模式），例如硬盘的逻辑分区、正在运行的应用的一个实例，或者一条电缆。</p>
-<p>WBEM模型：基于web的企业管理，为管理企业环境开发一套标准接口集。</p>
-<p>WMI作为一种规范和基础结构，通过它可以访问、配置、管理和监视几乎所有的Windows资源，比如用户可以在远程计算机器上启动一个进程；设定一个在特定日期和时间运行的进程；远程启动计算机；获得本地或远程计算机的已安装程序列表；查询本地或远程计算机的Windows事件日志等等。</p>
-<p>WMI通过提供一致的模型和框架，所有的 Windows 资源均被描述并公开给外界。最好的一点是，系统管理员可以使用 WMI 脚本库创建系统管理脚本，从而管理任何通过 WMI 公开的 Windows 资源！</p>
-<h3 id="什么是J-Interop？"><a href="#什么是J-Interop？" class="headerlink" title="什么是J-Interop？"></a>什么是J-Interop？</h3><p>官网介绍如下：</p>
-<p>j-Interop is a Java Open Source library (under LGPL) that implements the DCOM wire protocol (MSRPC) to enable development of Pure, Bi-Directional, Non-Native Java applications which can interoperate with any COM component.</p>
-<p>The implementation is itself purely in Java and does not use Java Native Interface (JNI) to provide COM access. This allows the library to be used from any Non-Windows platform.</p>
-<p>It comes with pre-implemented packages for automation. This includes support for IDispatch, ITypeInfo, and ITypeLib. For more flexibility (in the cases where automation is not supported), it provides an API set to directly invoke operations on a COM server.</p>
-<p>Another important feature is allowing full access and manipulation (C-R-U-D) of the Windows Registry in a platform independent manner.<br>The implementation has been tested on all advanced Windows and Fedora platform(s) and displays upward compatibility from JRE 1.3.1.</p>
-<p>通过J-Interop就可以实现对WMI的访问。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> Hyper-V </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Hyper-V </tag>
-            
-            <tag> 虚拟化 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[在Hyper-V系列文章之前]]></title>
-      <url>/2017/11/03/%E5%9C%A8Hyper-V%E7%B3%BB%E5%88%97%E6%96%87%E7%AB%A0%E4%B9%8B%E5%89%8D/</url>
-      <content type="html"><![CDATA[<p>目前正在做公司的项目就快要验收了，打算将项目中与Hyper-V相关的笔记做一个整理。项目中我们的云管平台需要接管用户的hyper-v虚拟机，能够实现对Hyper-V虚拟机的新建、删除、修改、启动、停止、web console、客户端 console等功能，由于首次接触Hyper-V相关的东西，我的Hyper-V系列文章主要记录我的一些学习过程，希望我记录的东西能够帮助到大家，因为能够完成这个项目阶段的开发也是离不开大家的帮助。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> Hyper-V </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Hyper-V </tag>
-            
-            <tag> 虚拟化 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[git使用教程]]></title>
-      <url>/2017/11/03/git%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B/</url>
-      <content type="html"><![CDATA[<p>打算要复习一下git的使用方法，搜了几篇不错的文章。我就不直接照搬全文了，连接如下：</p>
-<p>比较全面的教程：</p>
-<p><a href="http://www.imooc.com/article/20411" target="_blank" rel="external">Git使用教程,最详细，最傻瓜，最浅显，真正手把手教</a></p>
-<p>针对几种应用场景的教程：</p>
-<p><a href="http://www.imooc.com/article/19060" target="_blank" rel="external">git入门，先学会这几个姿势</a></p>
-<p>常用命令详解：<br><a href="http://www.imooc.com/article/1111" target="_blank" rel="external">Git常用命令备忘，希望对学习Git的朋友们有所帮助</a></p>
-<p>git进阶：</p>
-<p><a href="http://www.imooc.com/article/1111" target="_blank" rel="external">25个 Git 进阶技巧</a></p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> git </tag>
-            
-            <tag> 教程 </tag>
-            
-            <tag> 版本控制系统 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第8章 虚拟机字节码执行引擎]]></title>
-      <url>/2017/10/30/%E7%AC%AC8%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AD%97%E8%8A%82%E7%A0%81%E6%89%A7%E8%A1%8C%E5%BC%95%E6%93%8E/</url>
-      <content type="html"><![CDATA[<p>在不同的虚拟机实现里面，执行引擎在执行Java代码的时候可能会有解释执行（通过解释器执行）和编译执行（通过即时编译器产生本地代码执行）两种选择，可能能两者兼备，甚至还可能会包含几个不同级别的编译器执行引擎。</p>
-<h4 id="运行时栈帧结构"><a href="#运行时栈帧结构" class="headerlink" title="运行时栈帧结构"></a>运行时栈帧结构</h4><p>栈帧是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈的栈元素。</p>
-<p>栈帧存储了方法的局部变量表、操作数栈、动态链接和方法返回地址等信息。</p>
-<p>在编译程序代码的时候，栈帧中需要多大的局部变量表，多深的操作数栈都已经完全确定了，并且写入到方法表的Code属性中，因此一个栈帧需要分配多少内存，不会受到程序运行期变量数据的影响，而仅仅取决于具体的虚拟机实现。</p>
-<h4 id="局部变量表"><a href="#局部变量表" class="headerlink" title="局部变量表"></a>局部变量表</h4><p>局部变量表是一组变量值存储空间，用于存放方法参数和方法内部定义的局部变量。</p>
-<p>reference类型表示对一个对象实例的引用，虚拟机实现至少都应当能通过这个引用做到两点：</p>
-<ol>
-<li>从此引用中直接或间接地查找到对象在Java堆中的数据存放的起始地址索引。</li>
-<li>此引用中直接或间接地查找到对象所属数据类型在方法区中的存储的类型信息，否则无法实现Java语言规范中定义的语法约束约束。</li>
-</ol>
-<p>Java语言中明确的64位的数据类型只有long和double两种。对于64位的数据类型，虚拟机会以高位对齐的方式为其分配两个连续的Slot空间。</p>
-<p>虚拟机通过索引定位的方式使用局部变量表，索引值的范围是从0开始至局部变量表最大的Slot数量。</p>
-<p>局部变量表中第0位索引的Slot默认是用于传递方法所属对象是的引用，在方法中可通过关键字“this”来访问到这个隐藏的参数。其余参数则按照参数表顺序排列，参数表分配完毕后，再根据方法体内部定义的变量顺序和作用与分配其余的Slot。</p>
-<p><strong>局部变量与类变量不一样，如果一个局部变量定义了但没有赋初始值是不能使用的，不要认为java中任何情况下都存在诸如整型变量默认为0，布尔型变量默认为false等，如以下代码</strong></p>
-<a id="more"></a>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">//未赋值的局部变量</div><div class="line">public static void main(String [] args)&#123;</div><div class="line">    int a;</div><div class="line">    System.out.println(a);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h4 id="操作数栈（理解是充当寄存器的角色）"><a href="#操作数栈（理解是充当寄存器的角色）" class="headerlink" title="操作数栈（理解是充当寄存器的角色）"></a>操作数栈（理解是充当寄存器的角色）</h4><p>操作数栈也常称为操作栈，它是一个后入先出栈。同局部变量表一样，操作数栈的最大深度也在编译的时候写入到Code属性的max_stacks数据项中。</p>
-<ol>
-<li>操作数栈的每一个元素可以是任意的Java数据类型。32位数据类型所占的栈容量为1,64位数据类型所占的栈容量为2。</li>
-</ol>
-<h4 id="动态连接"><a href="#动态连接" class="headerlink" title="动态连接"></a>动态连接</h4><p>每个栈帧都包含一个指向运行时常量池中该栈帧所属方法的引用，持有这个引用是为了支持方法调用过程中的动态连接。</p>
-<h4 id="方法返回地址"><a href="#方法返回地址" class="headerlink" title="方法返回地址"></a>方法返回地址</h4><p>当一个方法开始执行后，只有两种方式可以退出这个方法：</p>
-<ol>
-<li>正常退出</li>
-<li>异常退出</li>
-</ol>
-<p>方法推出的过程实际上就等同于把当前栈帧出栈，因此退出是可能执行的操作有：</p>
-<ol>
-<li>回复上层方法的局部变量表和操作数栈；</li>
-<li>把返回值压入调用者栈帧的操作数占中；</li>
-<li>调整PC计数器的值以指向方法调用指令后面的一条指令等；</li>
-</ol>
-<h4 id="附加信息"><a href="#附加信息" class="headerlink" title="附加信息"></a>附加信息</h4><h4 id="方法调用"><a href="#方法调用" class="headerlink" title="方法调用"></a>方法调用</h4><p>方法调用不等于方法执行，方法调用阶段唯一的任务就是确定被调用方法的版本，暂时还不涉及方法内部的具体运行过程。</p>
-<h4 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h4><p>所有方法调用中的目标方法在Class文件里面都是一个常量池中的符号引用，在了加载的解析阶段，会将其中的一部分符号引用转化为直接引用。</p>
-<p><em>静态方法、私有方法、实例构造器、父类方法、被final修饰的方法都适合在类加载阶段进行解析，将符号引用解析为该方法的直接引用，这些方法称为非虚方法。</em></p>
-<p>解析调用一定是以静态的过程，在编译期间就完全确定，在类装载的解析阶段就会把涉及的符号引用全部转变为可确定的直接引用，不会延迟到运行期再去完成。</p>
-<h4 id="分派"><a href="#分派" class="headerlink" title="分派"></a>分派</h4><p>分派调用过程将会揭示多态性特征的一些最基本的体现。</p>
-<h5 id="1-静态分派"><a href="#1-静态分派" class="headerlink" title="1 静态分派"></a>1 静态分派</h5><p><em>静态方法会在类加载期就进行解析，而静态方法显然也是可以拥有重载版本的，选择重载版本的而过程也是通过静态分派完成的。</em></p>
-<h5 id="2-动态分派"><a href="#2-动态分派" class="headerlink" title="2 动态分派"></a>2 动态分派</h5><p>它和多态性的另外一个重要体现—<strong>*重写</strong>有着很密切的关系。</p>
-<h5 id="3-单分派和多分派"><a href="#3-单分派和多分派" class="headerlink" title="3 单分派和多分派"></a>3 单分派和多分派</h5><p>方法的接受者与方法的参数统称为方法的宗量，单分派是根据一个宗量对目标方法进行选择，多分派则是根据多于一个宗量对目标方法进行选择。</p>
-<p>今天的Java语言是一门静态多分派、动态单分派的语言。</p>
-<h5 id="4-虚拟机动态分派的实现"><a href="#4-虚拟机动态分派的实现" class="headerlink" title="4 虚拟机动态分派的实现"></a>4 虚拟机动态分派的实现</h5><p>使用虚方法表索引来代替元数据查找以提高性能。</p>
-<p>方法表一般在类加载的连接阶段进行初始化，准备了类的变量初始值后，虚拟机会把该类的方法表也初始化完毕。</p>
-<h4 id="动态类型语言支持-重要"><a href="#动态类型语言支持-重要" class="headerlink" title="动态类型语言支持(重要)"></a>动态类型语言支持(重要)</h4><p>什么是动态类型语言：动态类型语言的关键特征是它的类型检查的主题过程是在运行期而不是编译期。</p>
-<p>与运行时异常相对应的是连接时异常，例如很常见的NoClassDefFoundError便属于连接时异常。</p>
-<h4 id="基于栈的字节码解释执行引擎"><a href="#基于栈的字节码解释执行引擎" class="headerlink" title="基于栈的字节码解释执行引擎"></a>基于栈的字节码解释执行引擎</h4><h5 id="解释执行"><a href="#解释执行" class="headerlink" title="解释执行"></a>解释执行</h5><p>Javac编译器代码经过词法分析、语法分析到抽象语法树，再遍历语法树生成线性的字节码指令流的过程，Java程序的编译就是半独立的实现。</p>
-<h5 id="基于栈的指令集与基于寄存器的指令集"><a href="#基于栈的指令集与基于寄存器的指令集" class="headerlink" title="基于栈的指令集与基于寄存器的指令集"></a>基于栈的指令集与基于寄存器的指令集</h5><p>Java编译器输出的指令流，基本上是一种基于栈的指令集架构，指令流中的指令大比分都是零地址指令，它们依赖操作数栈进行工作。</p>
-<p>基于栈的指令集主要的优点：</p>
-<ol>
-<li>可移植；</li>
-<li>代码相对更加紧凑</li>
-<li>编译更加简单等</li>
-</ol>
-<p>缺点：</p>
-<ol>
-<li>完成相同功能需要的指令数量多。</li>
-<li>频繁地访问内存，相对处理器来说，内存始终是执行速度额瓶颈；</li>
-</ol>
-<h4 id="基于栈的解释器执行过程"><a href="#基于栈的解释器执行过程" class="headerlink" title="基于栈的解释器执行过程"></a>基于栈的解释器执行过程</h4>]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第7章 虚拟机类加载机制]]></title>
-      <url>/2017/10/30/%E7%AC%AC7%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6/</url>
-      <content type="html"><![CDATA[<p>虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。</p>
-<p>在Java语言里，类型的加载、连接和初始化都是在程序运行期间完成的。</p>
-<h4 id="类加载的时机"><a href="#类加载的时机" class="headerlink" title="类加载的时机"></a>类加载的时机</h4><p>类从被加载到虚拟机内存中开始，到卸载出内存为止，它的整个生命周期包括：加载、验证、准备、解析、初始化、使用和卸载。其中验证、准备、解析3个部分统称为连接。</p>
-<p>解析阶段不一定：它在某些情况下可以在初始化阶段之后再开始，这个是为了支持Java语言的运行时绑定（也称动态绑定或晚期绑定）。</p>
-<p>对于初始化阶段，虚拟机规范则是严格规定了有且只有5中情况必须立即对类进行“初始化”（而加载、验证、准备自然需要在此之前开始）：</p>
-<ol>
-<li>遇到new、getstatic、putstatic或invokestatic这4条字节指令时，如果类没有进行过初始化，则需要先触发其初始化。</li>
-<li>使用java。lang.reflect包的方法对类进行反射调用的时候，如果类没有进行过初始化，则需要先触发其初始化。</li>
-<li>当初始化一个类的时候，如果发现其父类还没有进行过初始化，则需要先触发其父类的初始化。</li>
-<li>当虚拟机启动时，用户需要制定一个要执行的主类，虚拟机会先初始化这个主类。</li>
-<li>5 当使用JDK1.7动态语言支持是，…….</li>
-</ol>
-<p>这5中场景中的行为成为对一个类进行主动引用，除此之外，所有引用类的方式都不会触发初始化，成为被动引用。</p>
-<h4 id="类加载过程"><a href="#类加载过程" class="headerlink" title="类加载过程"></a>类加载过程</h4><p>类加载的全过程，也就是加载、验证、准备、解析和初始化这个5个阶段。</p>
-<h5 id="1-加载"><a href="#1-加载" class="headerlink" title="1 加载"></a>1 加载</h5><p>在加载阶段，虚拟机需要完成一下3件事情：</p>
-<ol>
-<li>通过一个类的全限定名来获取定义此类的二进制字节流。</li>
-<li>将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构。</li>
-<li>在内存中生成一个代表这个类的java.lang.Class对象，作为方法区这个类的各种数据的访问入口，对于HotSpot虚拟机而言，Class对象比较特殊，它虽然是对象，但是存放在方法区里面。</li>
-</ol>
-<a id="more"></a>
-<p>数组类本身不通过类加载器创建，它是由Java虚拟机直接创建的。</p>
-<h5 id="2-验证"><a href="#2-验证" class="headerlink" title="2 验证"></a>2 验证</h5><p>验证是连接阶段的第一步，目的是为了确保Class文件的字节流中包含的信息符合当前虚拟机的要求，并且不会危害虚拟机自身的安全。</p>
-<p>验证阶段的4个检验动作：</p>
-<ol>
-<li>文件格式验证：通过这个阶段的验证后，字节流才会进入内存的方法区中进行存储，所以后面的3个验证阶段全部都是基于方法区的存储结构进行的，不会再直接操作字节流。</li>
-<li>元数据验证</li>
-<li>字节码验证：确定程序语义是合法的、符合逻辑的。</li>
-<li>符号引用验证</li>
-</ol>
-<h5 id="3-准备"><a href="#3-准备" class="headerlink" title="3 准备"></a>3 准备</h5><p>准备阶段是正式为类变量分配内存并设置类变量初始值的阶段，这些变量所使用的内存都将在方法区中进行分配。</p>
-<p><em>注意</em>：首先，这时候进行内存分配的仅包括类变量（被static修饰的变量），而不包括实例变量，实例变量将会在对象实例化时随着对象一起分配在Java堆中。其次，这里所说的初始值“通常情况”下是数据类型的零值。java程序的初始值赋值动作在初始化阶段才会执行。</p>
-<p><em>特殊情况</em>：如果类字段的字段属性表存在ConstantValue属性，那在准备阶段变量value就会被初始化为ConstantValue属性所指定的值，假设上面类变量value的定义为：</p>
-<p><code>public static final int value = 123</code></p>
-<p>编译时javac将会为value生成ConstantValue属性，在准备阶段虚拟机就会根据ConstantValue的设置将value赋值为123。因为关键字不但有<code>static</code>，还有<code>final</code>。</p>
-<h5 id="4-解析"><a href="#4-解析" class="headerlink" title="4 解析"></a>4 解析</h5><p>解析阶段是虚拟机将常量池内的符号引用替换为直接引用的过程。解析动作主要针对类或者接口、字段、类方法、接口方法、方法类型、方法句柄和调用点限定符7类符号引用进行，分别对应于常量池的……..。</p>
-<h5 id="5-初始化"><a href="#5-初始化" class="headerlink" title="5 初始化"></a>5 初始化</h5><p>类初始化阶段是类加载过程的最后一步。到了初始化阶段，才真正开始执行类中定义的Java程序代码（或者说字节码），是执行类构造器<clinit>()方法的过程。</clinit></p>
-<ol>
-<li>父类中定义的静态语句块要优先于子类的变量赋值操作。</li>
-</ol>
-<h4 id="类与类加载器"><a href="#类与类加载器" class="headerlink" title="类与类加载器"></a>类与类加载器</h4><h4 id="双亲委派模型"><a href="#双亲委派模型" class="headerlink" title="双亲委派模型"></a>双亲委派模型</h4><p>从Java虚拟机的角度将，只存在两种不同类型的类加载器：一种是启动类加载器，是虚拟机自身的一部分；另一种就是所有其他的类加载器。独立于虚拟机外部，并且全都继承自抽象类java.lang.ClassLoader。</p>
-<p>3种类型的类加载器：</p>
-<ol>
-<li>启动类加载器：加载<java_home>\lib目录中的并且是虚拟机识别的类库加载到虚拟机内存中。改加载器无法被Java程序直接引用。</java_home></li>
-<li>扩展类加载器：加载<java_home>\lib\ext目录中的类库。开发者可以直接使用。</java_home></li>
-<li>应用程序类加载器：负责加载用户类路径（ClassPath）上所指定的类库。</li>
-</ol>
-<p>如果有必要，还可以加入自己定义的类加载器。</p>
-<p><strong>这里类加载器之间的父子关系一般不会以继承的关系来实现，而是都使用组合关系来复用父类加载器的代码。</strong></p>
-<p>双亲委派模型的工作过程：……..。</p>
-<h4 id="破坏双亲委派模型"><a href="#破坏双亲委派模型" class="headerlink" title="破坏双亲委派模型"></a>破坏双亲委派模型</h4>]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第6章 类文件结构]]></title>
-      <url>/2017/10/30/%E7%AC%AC6%E7%AB%A0-%E7%B1%BB%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84/</url>
-      <content type="html"><![CDATA[<h4 id="无关性的基石"><a href="#无关性的基石" class="headerlink" title="无关性的基石"></a>无关性的基石</h4><p>各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。<br>无关性：</p>
-<ol>
-<li>平台无关性</li>
-<li>语言无关性<br>实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。</li>
-</ol>
-<h4 id="Class类文件的结构"><a href="#Class类文件的结构" class="headerlink" title="Class类文件的结构"></a>Class类文件的结构</h4><ol>
-<li>任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来说，类或接口并不一定都得定义在文件里。</li>
-<li>Class文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑第排列在Class文件中，中间没有任何分隔符。当遇到需要占用8位字节以上空间的数据项时，则会按照高位在前的方式分割成若干个8位字节进行存储（大端模式）。</li>
-<li>Class文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构中只有两种数据类型：无符号数和表。</li>
-<li>无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8编码构成字符串。</li>
-<li>表是由多个无符号数或者其他表作为数据项构成的复合数据类型，所有表都习惯性地以“_info”结尾。整个Class文件本质上就是一张表。</li>
-</ol>
-<h5 id="魔数与Class文件的版本"><a href="#魔数与Class文件的版本" class="headerlink" title="魔数与Class文件的版本"></a>魔数与Class文件的版本</h5><ol>
-<li>每个Class文件的头4个字节称为魔数，唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件，使用魔数不是扩展名来进行识别主要是基于安全方面的考虑，值为：0xCAFEBABE。</li>
-<li>紧接着魔数的4个字节存储的是Class文件的版本号：第5和第6个字节是次版本号，第7和第8个字节是主版本号。</li>
-</ol>
-<h5 id="常量池"><a href="#常量池" class="headerlink" title="常量池"></a>常量池</h5><p>紧接着主次版本号之后的是常量池入口，常量池可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，也是占用Class文件空间最大的数据项目之一，同时他还是在Class文件中第一个出现的表类型数据项目。</p>
-<p>常量池容量计数器是从1开始计数的，表示常量的个数。<br>常量翅中主要存放两大类常量：</p>
-<ol>
-<li>字面量</li>
-<li>符号引用</li>
-</ol>
-<a id="more"></a>
-<p>字面量比较接近于Java语言层面的常量概念，如字符串、声明为final的常量值等。而符号引用则属于编译原理方面的概念，包括了下面的三类常量：</p>
-<ol>
-<li>类和接口的全限定名</li>
-<li>字段的名称和描述符</li>
-<li>方法的名称和描述符<br>常量池中每一个常量都是一个表。</li>
-<li>常量池容量为21，表示有21项常量</li>
-</ol>
-<p><strong>由于Class文件中方法、字段等都需要引用CONSTANT_Utf8_info型常量来描述名称，所以CONSTANT_Utf8_info型常量的最大长度也就是Java中方法、字段名的最大长度。而这里的最大长度就是length的最大值，既u2类型能表达的最大值65535.所以Java程序中如果定义了超过65KB因为字符串的变量或方法名将会无法编译。</strong></p>
-<p>javap工具用于分析Class文件字节码的。</p>
-<h5 id="访问标志"><a href="#访问标志" class="headerlink" title="访问标志"></a>访问标志</h5><p>这个标志用于识别一些类或者是接口层次的访问信息。</p>
-<h5 id="类索引、父类索引与接口索引集合"><a href="#类索引、父类索引与接口索引集合" class="headerlink" title="类索引、父类索引与接口索引集合"></a>类索引、父类索引与接口索引集合</h5><p>Class文件中由这三项数据来确定这个类的继承关系。</p>
-<h5 id="字段表集合"><a href="#字段表集合" class="headerlink" title="字段表集合"></a>字段表集合</h5><p>字段表用于描述接口库或者类中声明的变量。</p>
-<p>字段包括类级变量以及实例级变量，但不包括在方法内部声明的局部变量。</p>
-<p>字段表集合中不会列出从超类或者父类接口中继承而来的字段，但有可能列出原本Java代码中不存在的字段。对于字节码来说，如果两个字段的描述符不一致，那字段重名就是合法的。</p>
-<h5 id="方发表集合"><a href="#方发表集合" class="headerlink" title="方发表集合"></a>方发表集合</h5><p>volatile关键字和transient关键字不能修饰方法，所以方发表的访问标志中没有了ACC_VOLATITE标志和ACC_TRANSIENT标志。</p>
-<h5 id="属性表集合"><a href="#属性表集合" class="headerlink" title="属性表集合"></a>属性表集合</h5><p>在Class文件、字段表、方发表都可以携带自己的属性表集合，以用于描述某些场景专有的信息。<br>操作栈数？<br>max_stack代表了操作数栈深度的最大值。在方法执行的任意时刻，操作栈数都不会超过这个深度。虚拟机运行的时候需要根据这个值来分配栈帧中的操作栈深度。</p>
-<h6 id="1-Code属性"><a href="#1-Code属性" class="headerlink" title="1 Code属性"></a>1 Code属性</h6><p>了解Code属性是学习后面关于字节码执行引擎内容的必要基础，能直接阅读字节码也是工作中分析Java代码语义问题的必要工具和基本技能。 </p>
-<p>使用Javap 命令计算字节码指令： javap -verbose TestClass</p>
-<p>在实例方法的局部变量表中至少会存在一个指向当前对象实例的局部变量，局部变量表中也会预留第一个Slot位来存放对象实例的引用，方法参数值从1开始计算。，这个处理只对实例方法有效。</p>
-<h6 id="2-Exceptions属性"><a href="#2-Exceptions属性" class="headerlink" title="2 Exceptions属性"></a>2 Exceptions属性</h6><p>Exceptions属性的作用是列举出方法中可能抛出的受检查异常(Checked Exceptions)，也就是方法描述时在throws关键字后面列举的异常。</p>
-<h6 id="3-LineNumberTable属性"><a href="#3-LineNumberTable属性" class="headerlink" title="3 LineNumberTable属性"></a>3 LineNumberTable属性</h6><p>LineNumberTable属性用于描述Java源码行号与字节码行号之间的对应关系。 </p>
-<h6 id="4-LocalVariableTable属性"><a href="#4-LocalVariableTable属性" class="headerlink" title="4 LocalVariableTable属性"></a>4 LocalVariableTable属性</h6><p>LocalVariableTable属性用于描述栈帧中局部变量表中的变量与Java源码中定义的变量之间的关系</p>
-<h6 id="5-SourceFile属性"><a href="#5-SourceFile属性" class="headerlink" title="5 SourceFile属性"></a>5 SourceFile属性</h6><p>SourceFile属性用于记录生成这个Class文件的源码文件名称。</p>
-<h6 id="6-ConstantValue属性"><a href="#6-ConstantValue属性" class="headerlink" title="6 ConstantValue属性"></a>6 ConstantValue属性</h6><p>ConstantValue属性的作用是通知虚拟机自动为静态变量赋值。onstantValue的属性值只能限于基本类型和String。</p>
-<h6 id="7-InnerClasses属性"><a href="#7-InnerClasses属性" class="headerlink" title="7 InnerClasses属性"></a>7 InnerClasses属性</h6><p>InnerClasses属性用于记录内部类与宿主类之间的关联。</p>
-<h6 id="8-Deprecated及Synthetic属性"><a href="#8-Deprecated及Synthetic属性" class="headerlink" title="8 Deprecated及Synthetic属性"></a>8 Deprecated及Synthetic属性</h6><h6 id="9-StackMapTable属性"><a href="#9-StackMapTable属性" class="headerlink" title="9 StackMapTable属性"></a>9 StackMapTable属性</h6><h6 id="10-Signature"><a href="#10-Signature" class="headerlink" title="10 Signature"></a>10 Signature</h6><h6 id="11-BootstrapMethods属性"><a href="#11-BootstrapMethods属性" class="headerlink" title="11 BootstrapMethods属性"></a>11 BootstrapMethods属性</h6><h5 id="字节码指令简介"><a href="#字节码指令简介" class="headerlink" title="字节码指令简介"></a>字节码指令简介</h5><p>Java虚拟机的指令由一个字节长度、代表着某种特定操作含义的数字（称为操作码，Opcode）以及跟随其后的零至多个代表此操作所需参数（称为操作数，Operands）而构成。</p>
-<h6 id="1-字节码与数据结构"><a href="#1-字节码与数据结构" class="headerlink" title="1 字节码与数据结构"></a>1 字节码与数据结构</h6><p>阅读字节码作为了解Java虚拟机的基础技能，是一项应当熟练掌握的能力。</p>
-<h6 id="2-加载和存储指令"><a href="#2-加载和存储指令" class="headerlink" title="2 加载和存储指令"></a>2 加载和存储指令</h6><p>加载和存储指令用于将数据在栈帧中的局部变量表和操作数栈之间来回传输。</p>
-<h6 id="3-运算指令"><a href="#3-运算指令" class="headerlink" title="3 运算指令"></a>3 运算指令</h6><p>运算指令用于对两个操作数栈上的值进行某种特定运算，并把结果重新存入到操作栈顶。</p>
-<p>算术指令分为两种：</p>
-<ol>
-<li>对整型数据进行运算的指令。</li>
-<li>对浮点型数据进行运算的指令。</li>
-</ol>
-<p>无论哪种算术指令，都使用Java虚拟机的数据类型，由于没有直接支持byte，short，char和boolean类型的算术指令，对于这类数据的运算，应使用操作int类型的指令代替。</p>
-<h6 id="4-类型转换指令"><a href="#4-类型转换指令" class="headerlink" title="4 类型转换指令"></a>4 类型转换指令</h6><h6 id="5-对象创建与访问指令"><a href="#5-对象创建与访问指令" class="headerlink" title="5 对象创建与访问指令"></a>5 对象创建与访问指令</h6><h6 id="6-操作数栈管理指令"><a href="#6-操作数栈管理指令" class="headerlink" title="6 操作数栈管理指令"></a>6 操作数栈管理指令</h6><p>操作数栈的指令：</p>
-<ol>
-<li>将操作数栈的栈顶一个或两个元素出栈：pop、pop2。</li>
-<li>复制栈顶一个或两个数值并将复制值或双份的复制值重新压入栈顶：dup、dup2、dup_x1、dup_x2、dup2_x2。</li>
-<li>将栈最顶端的两个数值互换：swap。</li>
-</ol>
-<h6 id="7-控制转移指令"><a href="#7-控制转移指令" class="headerlink" title="7 控制转移指令"></a>7 控制转移指令</h6><h6 id="8-方法调用和返回指令"><a href="#8-方法调用和返回指令" class="headerlink" title="8 方法调用和返回指令"></a>8 方法调用和返回指令</h6><h6 id="9-异常处理指令"><a href="#9-异常处理指令" class="headerlink" title="9 异常处理指令"></a>9 异常处理指令</h6><h6 id="10-同步指令"><a href="#10-同步指令" class="headerlink" title="10 同步指令"></a>10 同步指令</h6><h5 id="共有设计和私有设计"><a href="#共有设计和私有设计" class="headerlink" title="共有设计和私有设计"></a>共有设计和私有设计</h5>]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第5章 调优案例分析与实战]]></title>
-      <url>/2017/10/30/%E7%AC%AC5%E7%AB%A0-%E8%B0%83%E4%BC%98%E6%A1%88%E4%BE%8B%E5%88%86%E6%9E%90%E4%B8%8E%E5%AE%9E%E6%88%98/</url>
-      <content type="html"><![CDATA[<h4 id="高性能硬件上的程序部署策"><a href="#高性能硬件上的程序部署策" class="headerlink" title="高性能硬件上的程序部署策"></a>高性能硬件上的程序部署策</h4><p>三大块非用户程序时间：</p>
-<ol>
-<li>编译时间</li>
-<li>垃圾收集时间</li>
-<li>GC时间<ol>
-<li>新生代minor GC</li>
-<li>老年代Full GC<br>编译时间是指虚拟机的JIT编译器编译热点代码的耗时。Java的运行时编译最大的缺点就是它进行编译需要消耗程序正常的运行时间。</li>
-</ol>
-</li>
-</ol>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第4章 虚拟机性能监控与故障处理工具]]></title>
-      <url>/2017/10/30/%E7%AC%AC4%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%80%A7%E8%83%BD%E7%9B%91%E6%8E%A7%E4%B8%8E%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7/</url>
-      <content type="html"><![CDATA[<h4 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h4><p>给定一个系统定位问题的时候，只是、经验是关键基础，数据时依据，工具是运用知识处理数据的手段。这里说的数据包括：运行日志、异常对战、GC日志、线程快照（threaddump/jvacore文件）、堆转存储快照（headdump/hprof文件）等。</p>
-<p>JDK的命令行工具</p>
-<p>解决liunx下jstat无法查看虚拟机状态的问题：<a href="http://www.cnblogs.com/saias/p/6874202.html" target="_blank" rel="external">连接</a>。</p>
-<p>启动后,这时候使用jstat查看该tomcat的状态提示pid not found,使用jps也没有这条信息,但是ps查看明明就有,顿时感觉很坑爹.<br>一顿查找资料后,逐步解决.<br>首先java进程会向/tmp里写文件,路径为hsperfdata<em>$user/$pid,如果在tmp下没有这个文件jps就会查找不到这个线程.如果tmp下的java临时文件有误就会提示xx – process information unavailable,<br>这时候把tmp下hsperfdata</em>这样的都删了,然后重启java程序,再使用<strong>jps</strong>就能正常输出结果了.</p>
-<p>然后tomcat的catalina.sh里开头设置CATALINA_TMPDIR=/tmp,这样下面的脚本执行-Djava.io.tmpdir=\”$CATALINA_TMPDIR\” \,这样就可以达到效果是加上java参数-Djava.io.tmpdir=/tmp.<br>这时候重启tomcat后,输入jstat -gcutil pid,就可以显示jvm的情况了</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第3章 垃圾收集器与内存分配策略]]></title>
-      <url>/2017/10/30/%E7%AC%AC3%E7%AB%A0-%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E4%B8%8E%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5/</url>
-      <content type="html"><![CDATA[<h4 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h4><ol>
-<li>每个栈中的栈帧随着方法的进入和退出而有条不紊地执行着出栈和入栈操作，每一个栈帧中分配多少内存基本上是在类结构确定下来是就已知的。</li>
-<li>程序计数器、虚拟机栈、本地方法栈这几个区域的内存分配和回收都具备确定性，不需要过多考虑回收的问题，因为方法结束或者线程结束时，内存自然就跟着回收了。而java堆和方法区则不一样。</li>
-</ol>
-<h4 id="对象已死吗"><a href="#对象已死吗" class="headerlink" title="对象已死吗"></a>对象已死吗</h4><h5 id="Java堆回收"><a href="#Java堆回收" class="headerlink" title="Java堆回收"></a>Java堆回收</h5><ol>
-<li>主流的java虚拟机里面没有选用引用计数器算法来管理内存，其中最主要的原因是它很难解决对象之间互相循环引用的问题。</li>
-<li>通过可达性分析算法来判定对象是否存活着，算法思路：通过一系列的称为“GC Roots”的对象作为起始点，从这些节点开始向下搜索，搜索所走过的路径称为引用链（Reference Chain），当一个对象到GC Roots没有任何引用链相连时，则证明此对象是不可用的。</li>
-<li>可作为GC Roots的对象包括下面几种:<ol>
-<li>虚拟机栈（栈帧中的本地变量表）中引用的对象。</li>
-<li>方法区中类静态属性引用的对象</li>
-<li>方法区中常量引用的对象</li>
-<li>本地方法栈中JNI引用的对象</li>
-</ol>
-</li>
-<li>java将引用分为强引用、软引用、弱引用、虚引用，引用强度逐渐减弱。</li>
-<li>可达性分析算法中不可达的对象，也并非是“非死不可”的，这时候它们暂时处于“缓刑”阶段，要真正宣告一个对象死亡，至少要经历两次标记过程。</li>
-<li>finalize()方法中对象逃脱死亡命运的最后一次机会。</li>
-<li>任何一个对象的finalize()方法都只会被系统自动调用一次，如果对象面临下一次回收，它的finalize()方法不会再次被执行。尽量避免使用它。</li>
-</ol>
-<a id="more"></a>
-<h5 id="方法区回收"><a href="#方法区回收" class="headerlink" title="方法区回收"></a>方法区回收</h5><ol>
-<li>Java虚拟机规范中确实说过可以不要求虚拟机在方法区(永久代)实现垃圾收集。</li>
-<li>永久代的垃圾回收主要回收两部分内容：废弃产量和无用的类。</li>
-<li>无用的类：<ol>
-<li>该类所有的实例都已经被回收，也就是Java堆中不存在该类的任何引用。</li>
-<li>加载该类的ClassLoader已经被回收。</li>
-<li>该类对用的java.lang.Class对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。</li>
-</ol>
-</li>
-</ol>
-<h5 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h5><ol>
-<li>什么是新生代、永久代、老年代</li>
-</ol>
-<h5 id="HotSpot的算法实现"><a href="#HotSpot的算法实现" class="headerlink" title="HotSpot的算法实现"></a>HotSpot的算法实现</h5><p>以下是介绍如何发起内存回收，还没回收：</p>
-<ol>
-<li>枚举根节点；</li>
-<li>安全点中断方式：抢先式中断、主动式中断，几乎没有虚拟机采用抢先式中断；</li>
-<li>安全区域：解决了“不执行的线程”无法到达安全点的问题。安全区域是指在一段代码片段之中，引用关系不会发生变化。</li>
-</ol>
-<h5 id="垃圾收集器（真正回收）"><a href="#垃圾收集器（真正回收）" class="headerlink" title="垃圾收集器（真正回收）"></a>垃圾收集器（真正回收）</h5><p>真正回收垃圾</p>
-<ol>
-<li>Serial收集器（新生代收集器，client模式下是很好的选择，单CPU下效果好）</li>
-<li>ParNew收集器：Serial多线程版本（Server模式下首选新生代收集器）</li>
-<li>Parallel Scavenge收集器（新生代）：吞吐量优先的收集器</li>
-<li>Serial Old收集器（老年代）</li>
-<li>CMS收集器（老年代）：以获取最短回收停顿时间为目标的收集器。步骤：<ol>
-<li>初始标志</li>
-<li>并发标志</li>
-<li>重新标志</li>
-<li>并发清除</li>
-</ol>
-</li>
-<li><p>G1收集器（新生代、老年代），优点：</p>
-<ol>
-<li>并行与并发</li>
-<li>分代收集（新生代、老年代）</li>
-<li>空间整合（整体：标记-整理实现，局部复制算法实现）</li>
-<li><p>可预测的停顿</p>
-<p>步骤：</p>
-</li>
-<li><p>初始标记</p>
-</li>
-<li>并发标记</li>
-<li>最终标记</li>
-<li>筛选回收</li>
-</ol>
-</li>
-</ol>
-<h5 id="理解GC日志"><a href="#理解GC日志" class="headerlink" title="理解GC日志"></a>理解GC日志</h5><p>阅读GC日志是处理Java虚拟机内存问题的基础技能。</p>
-<h4 id="内存分配与回收策略"><a href="#内存分配与回收策略" class="headerlink" title="内存分配与回收策略"></a>内存分配与回收策略</h4><p>给对象分配内存，对象主要分配在新生代的Eden区上，如果启动了本地线程分配缓冲，将按线程优先在TLAB上分配。</p>
-<p>几条最普遍的内存分配规则</p>
-<ol>
-<li>对象优先在Eden分配，-Xmn10M表示10M分配给了新生代；-XX:SurvivorRatio=8决定了新生代中Eden区与一个Survivor区的空间比例是8:1.</li>
-<li>Minor GC和Full GC有什么不一样吗？</li>
-</ol>
-<h4 id="大对象直接进入老年代"><a href="#大对象直接进入老年代" class="headerlink" title="大对象直接进入老年代"></a>大对象直接进入老年代</h4><p>最典型的大对象就是那种很长的字符串以及数组。虚拟机提供了一个-XX:PretenureSizeThreshold参数，令大于这个设置值的对象直接在老年代分配。</p>
-<h4 id="长期存活的对象将进入老年代"><a href="#长期存活的对象将进入老年代" class="headerlink" title="长期存活的对象将进入老年代"></a>长期存活的对象将进入老年代</h4><ol>
-<li>对象晋升老年代的年龄阈值，可以通过参数：-XX:MaxTenuringThreshold设置。</li>
-<li>1 对象优先在Eden中分配，当Eden中没有足够的空间分配时会促发一次Minor GC。每次Minor GC结束后，Eden区会清空，因为它会把Eden中还依然存活的对象放到Survivor中，当Survivor中放不下时，则由分派担保进入老年代中。2 大对象直接进入老年代中。-XX:+PretenuerSizeThreshold 控制”大对象的“的大小。即当创建的对象大于这个临界值时，则该对象直接进入老年代。3 长期存活的对象将进入老年代。虚拟机对每个对象定义了一个对象年龄（Age）计数器。当年龄增加到一定的临界值时，就会晋升到老年代中，该临界值由参数：-XX:MaxTenuringThreshold来设置。如果对象在Eden出生并在第一次发生Minor GC时仍然存活，并且能够被Survivor中所容纳的话，则该对象会被移动到Survivor中，并且设Age=1；以后每经历一次Minor GC，该对象还存活的话会被移动到另一个Survivor区中，并且Age=Age+1。4 动态对象年龄判定：如上所示，虚拟机并不总是要求对象的年龄必须达到MaxTenuringThreshold才能晋升到老年代，如果在Survivor区中相同年龄（设年龄为age）的对象的所有大小之和超过Survivor空间的一半，年龄大于或等于该年龄（age）的对象就可以直接进入老年代，无需等到MaxTenuringThreshold中要求的年龄。</li>
-</ol>
-<h4 id="动态对象年龄判定"><a href="#动态对象年龄判定" class="headerlink" title="动态对象年龄判定"></a>动态对象年龄判定</h4><p>如果在Survivor空间中相同年龄所有对象大小的总和大于Survivor空间的一半，年龄大于或等于该年龄的对象就可以直接进入老年代，无须等到MaxTenuringThreshold中要求的年龄。</p>
-<h4 id="空间分配担保"><a href="#空间分配担保" class="headerlink" title="空间分配担保"></a>空间分配担保</h4><p>每一次回收晋升到老年代对象容量的平均大小值最为经验值，与老年代的剩余空间进行比较，决定是否进行Full GC来让老年代腾出更多的空间。老年代空间不足会出现担保失败。</p>
-<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>内存回收与垃圾收集器在很多时候都是影响系统性能、并发能力的主要因素之一，虚拟机之所以提供多种不同的收集器以及提供大量的调节参数，是因为只有根据实际应用需求、实现方式选择最优的收集方式才能获取最高的性能。</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第2章 Java内存区域与内存溢出异常]]></title>
-      <url>/2017/10/30/%E7%AC%AC2%E7%AB%A0-Java%E5%86%85%E5%AD%98%E5%8C%BA%E5%9F%9F%E4%B8%8E%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%BC%82%E5%B8%B8/</url>
-      <content type="html"><![CDATA[<h4 id="计数器"><a href="#计数器" class="headerlink" title="计数器"></a>计数器</h4><ol>
-<li>字节码解释器工作时通过改变计数器的值来选取下一条需要执行的字节码指令。</li>
-<li>每个线程有独立的计数器。</li>
-<li>如果正在执行的是Native方法，这个计数器值为空（Undefined)。</li>
-<li>计数器的内存区域是唯一一个在Java虚拟机规范中没有规定任何OutOfMemoryError情况的区域。</li>
-</ol>
-<h4 id="虚拟机栈"><a href="#虚拟机栈" class="headerlink" title="虚拟机栈"></a>虚拟机栈</h4><ol>
-<li>与计数器一样，虚拟机栈也是线程私有的，生命周期与线程相同。</li>
-<li>描述的是Java方法执行的内存模型</li>
-<li>栈帧是方法运行时的基础数据结构。</li>
-<li>Java虚拟机规范对这个区域规定了两种异常情况：如果线程请求的栈深度大于虚拟机所允许的深度，将抛出StackOverflowError异常；如果虚拟机栈可以动态扩展，扩展时无法申请到足够的内存，就会抛出OutOfMemoryError异常。<h4 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h4></li>
-<li>为虚拟机使用到的Native方法服务。</li>
-<li>本地方法栈也会抛出StackOverflowError和OutOfMemory异常。</li>
-<li>与虚拟机栈的作用相似。</li>
-</ol>
-<h4 id="Java堆"><a href="#Java堆" class="headerlink" title="Java堆"></a>Java堆</h4><ol>
-<li>Java堆是被所有线程共享的一块内存区域，在虚拟机启动时创建。以为目的是存放对象实例。</li>
-<li>是垃圾收集器管理的主要区域。</li>
-<li>堆中没有内存完成实例分配，并且堆也无法再扩展时，将会抛出OutOfMemoryError异常。</li>
-</ol>
-<h4 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h4><ol>
-<li>也是各个线程共享的内存区域，用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。</li>
-<li>除了和java堆一样不需要连续的内存和可以选择规定大小或者可扩展外，还可以选择不实现垃圾收集。</li>
-<li>这区域的内存回收目标主要是针对常量池的回收和对类型的卸载。</li>
-<li>无法满足内存分配的需求时，将会抛出OutOfMemoryError异常。</li>
-</ol>
-<h4 id="运行时常量池"><a href="#运行时常量池" class="headerlink" title="运行时常量池"></a>运行时常量池</h4><ol>
-<li>是方法区一部分。</li>
-<li>常量池用于存放编译器生成的各种字面量和符号引用，这部分内容将在类加载后进入方法区的运行时常量池存放。</li>
-</ol>
-<h4 id="直接内存"><a href="#直接内存" class="headerlink" title="直接内存"></a>直接内存</h4><ol>
-<li>NIO</li>
-</ol>
-<h4 id="对象的创建"><a href="#对象的创建" class="headerlink" title="对象的创建"></a>对象的创建</h4><ol>
-<li>对象在堆上的内存分配方式分为指针碰撞和空闲列表。</li>
-<li>对象内存空间分配完成后，内存空间都初始化为零值。</li>
-</ol>
-<h4 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h4><ol>
-<li>在内存中的布局分为3块区域：对象头、实例数据、对齐填充</li>
-</ol>
-<h4 id="对象的定位"><a href="#对象的定位" class="headerlink" title="对象的定位"></a>对象的定位</h4><ol>
-<li>通过栈上的reference数据来操作堆上的具体数据。</li>
-<li>目前主流的访问方式有使用句柄和直接指针两种。</li>
-</ol>
-<h4 id="排错"><a href="#排错" class="headerlink" title="排错"></a>排错</h4><ol>
-<li>注意区分是内存泄露(Memory Leak)，还是内存溢出(Memory Overflow)</li>
-<li>使用Eclipse Memory Analyzer进行分析，安装教程：<a href="http://www.jianshu.com/p/3b3c3a914724" target="_blank" rel="external">http://www.jianshu.com/p/3b3c3a914724</a></li>
-</ol>
-<h5 id="堆溢出"><a href="#堆溢出" class="headerlink" title="堆溢出"></a>堆溢出</h5><ol>
-<li>堆空间中的每个对象都是由一个根元素为起点被层层调用的。因此，一个对象还被某一个存活的根元素所引用，就会被认为是存活对象，不能被回收，进行内存释放。因此，我们可以通过分析一个对象到根元素的引用路径来分析为什么该对象不能被顺利回收。如果说一个对象已经不被任何程序逻辑所需要但是还存在被根元素引用的情况，我们可以说这里存在内存泄露。</li>
-<li>-Xmx20m -Xms20m 设置堆的最大最小；-Xss128k 设置虚拟机栈的大小；-Xoss设置本地方法栈大小；MaxPermSize(最大方法区容量)</li>
-</ol>
-<h5 id="虚拟机栈和本地方法栈溢出"><a href="#虚拟机栈和本地方法栈溢出" class="headerlink" title="虚拟机栈和本地方法栈溢出"></a>虚拟机栈和本地方法栈溢出</h5><ol>
-<li>如果线程请求的栈深度大于虚拟机所允许的最大深度，将抛出StackOverflow异常（栈溢出）；如果虚拟机在扩展栈时无法申请到足够的内存空间，则将抛出OutOfMemoryError异常（内存泄露）。</li>
-<li>为了防止多线程导致的内存溢出，要注意控制虚拟机栈和本地方法栈的大小。</li>
-</ol>
-<h5 id="方法区和运行时常量池溢出"><a href="#方法区和运行时常量池溢出" class="headerlink" title="方法区和运行时常量池溢出"></a>方法区和运行时常量池溢出</h5><p>运行时常量区是方法区的一部分。</p>
-<ol>
-<li>String.intern()方法在JDK1.7之后的改变，注意“首次出现原则”。</li>
-</ol>
-<h5 id="本机直接内存溢出"><a href="#本机直接内存溢出" class="headerlink" title="本机直接内存溢出"></a>本机直接内存溢出</h5><ol>
-<li>DirectMemory容量可通过 -XX: MaxDirectMemorySize指定，如果不指定则默认与Java堆最大值（-Xmx指定）一样。</li>
-<li>由DirectMemory导致的内存溢出，一个明显的特征是在Heap Dump文件中是不会看见明显的异常，如果读者返现OOM之后Dump文件很小，而程序中有直接或间接使用了NIO，那就可以考虑检查一下是不是这方面的原因。</li>
-</ol>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[第1章 走进Java]]></title>
-      <url>/2017/10/30/%E7%AC%AC1%E7%AB%A0-%E8%B5%B0%E8%BF%9BJava/</url>
-      <content type="html"><![CDATA[<h3 id="java优点"><a href="#java优点" class="headerlink" title="java优点"></a>java优点</h3><ol>
-<li>摆脱平台束缚；</li>
-<li>提供一个相对安全的内存管理和访问机制，避免了绝大部分的内存泄露和指针越界问题</li>
-<li>实现了热点代码监测和运行时编译及优化</li>
-<li>有一套完善的应用程序接口，还有无数来自商业机构和开源社区的第三方类库来帮助它实现各种各样的功能</li>
-</ol>
-<a id="more"></a>
-<h3 id="java技术体系"><a href="#java技术体系" class="headerlink" title="java技术体系"></a>java技术体系</h3><p><em>Java程序设计语言、Java虚拟机、Java API类库这三部分统称为JDK，JDK是用于支持Java程序开发的最小环境</em></p>
-<p><em>Java类库中的Java SE API子集和Java虚拟机这两部分统称为JRE，JRE是支持Java程序运行的标准环境。</em></p>
-]]></content>
-      
-        <categories>
-            
-            <category> 技术 </category>
-            
-            <category> 学习 </category>
-            
-            <category> JVM </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> Java </tag>
-            
-            <tag> 虚拟机 </tag>
-            
-            <tag> JVM </tag>
-            
-            <tag> 深入理解Java虚拟机读书笔记 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
-      <title><![CDATA[我的第一篇博客]]></title>
-      <url>/2017/10/30/%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E5%8D%9A%E5%AE%A2/</url>
-      <content type="html"><![CDATA[<p>首先要纪念一下，这是我第一次写博客，这也是我的第一篇博文。我希望以后几年，十几年，几十年都能够坚持写下去，与大家分享生活与工作中一切好的东西！</p>
-<a id="more"></a>
-<p>我一直都想把工作和生活中的点点滴滴以博文的方式跟大家分享，但是一直都没有付诸行动（其实就是懒），直到前段时间跟同一年以应届生身份进公司的同事聊天时才知道他一直在坚持写博客，他向我推荐了他的博客，还告诉我怎么去搭建博客站点（这里要感谢github），这才完全激起了我的兴趣。当然我不希望自己只有三分钟热度，我希望自己能够一直写下去。</p>
-<p>当然，不只是一时兴起，我打算写博客还基于几个原因：</p>
-<ol>
-<li>我一直是分享的受益者，这些年通过大家的分享帮助我解决了很多问题，因此，我希望尽最大努力回馈大家；</li>
-<li>将工作中遇到的一些坑或是解决的某些技术问题做一个总结，以备后期查阅；</li>
-<li>记录技术与生活相关的学习笔记，展示自己的技术栈，督促自己必须不断地学习；</li>
-<li>写一些生活感想，记录一些生活的美好瞬间；</li>
-</ol>
-<p>加油吧，少年！（嘿嘿）</p>
-]]></content>
-      
-        <categories>
-            
-            <category> 生活 </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> 感想 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-  
-  
+<search>
+  <entry>
+    <title><![CDATA[CAS(Compare and Swap) 原理学习]]></title>
+    <url>%2F2017%2F12%2F28%2FCAS-Compare-and-Swap-%E5%8E%9F%E7%90%86%E5%AD%A6%E4%B9%A0%2F</url>
+    <content type="text"><![CDATA[最近打算学习CAS的相关原理，所以转载了一下两篇文章： 浅谈CAS(Compare and Swap) 原理 CAS(Compare and Swap)理解 什么叫CAS（Compare and Swap）?硬件同步原语！！ 什么蛋疼的名字，一般人很难理解。根据英文全称翻译==比较与交换，这个名字大致还能理解一点,目前先暂且这么理解吧. 有啥用处？ 对于常用多线程编程的人估计知道，对于一般人估计都不曾听说。在jdk5之前,我们知道，在多线程编程的时候，为了保证多个线程对一个对象同时进行访问时,我们需要加同步锁synchronized,保证对象的在使用时的正确性，但是加锁的机制会导致如下几个问题 1.加多线程竞争下，加锁和释放锁会导致较多的上下文切换，引起性能问题。 2.多线程可以导致死锁的问题。 3.多线程持有的锁会导致其他需要此锁的线程挂起。 4…… 有更好的办法么？ 锁的分类：独占锁（悲观锁），乐观锁 独占锁：synchronized就是一种独占锁，它会导致所有需要此锁的线程挂起，等待锁的释放。 乐观锁：每次不加锁去完成操作，如果因为冲突失败就重试，直到成功。 CAS的机制就相当于这种（非阻塞算法），CAS是由CPU硬件实现，利用JNI来完成CPU指令的操作，所以执行相当快.CAS有三个操作参数：内存地址，期望值，要修改的新值，当期望值和内存当中的值进行比较不相等的时候，表示内存中的值已经被别线程改动过，这时候失败返回，当相等的时候，将内存中的值改为新的值，并返回成功。 CAS缺点 CAS虽然很高效的解决原子操作，但是CAS仍然存在三大问题。ABA问题，循环时间长开销大和只能保证一个共享变量的原子操作 ABA问题。因为CAS需要在操作值的时候检查下值有没有发生变化，如果没有发生变化则更新，但是如果一个值原来是A，变成了B，又变成了A，那么使用CAS进行检查时会发现它的值没有发生变化，但是实际上却变化了。ABA问题的解决思路就是使用版本号。在变量前面追加上版本号，每次变量更新的时候把版本号加一，那么A－B－A 就会变成1A-2B－3A。 从Java1.5开始JDK的atomic包里提供了一个类AtomicStampedReference来解决ABA问题。这个类的compareAndSet方法作用是首先检查当前引用是否等于预期引用，并且当前标志是否等于预期标志，如果全部相等，则以原子方式将该引用和该标志的值设置为给定的更新值。 关于ABA问题参考文档: http://blog.hesey.NET/2011/09/resolve-aba-by-atomicstampedreference.html 循环时间长开销大。自旋CAS如果长时间不成功，会给CPU带来非常大的执行开销。如果JVM能支持处理器提供的pause指令那么效率会有一定的提升，pause指令有两个作用，第一它可以延迟流水线执行指令（de-pipeline）,使CPU不会消耗过多的执行资源，延迟的时间取决于具体实现的版本，在一些处理器上延迟时间是零。第二它可以避免在退出循环的时候因内存顺序冲突（memory order violation）而引起CPU流水线被清空（CPU pipeline flush），从而提高CPU的执行效率。 只能保证一个共享变量的原子操作。当对一个共享变量执行操作时，我们可以使用循环CAS的方式来保证原子操作，但是对多个共享变量操作时，循环CAS就无法保证操作的原子性，这个时候就可以用锁，或者有一个取巧的办法，就是把多个共享变量合并成一个共享变量来操作。比如有两个共享变量i＝2,j=a，合并一下ij=2a，然后用CAS来操作ij。从Java1.5开始JDK提供了AtomicReference类来保证引用对象之间的原子性，你可以把多个变量放在一个对象里来进行CAS操作。 比较花费CPU资源，即使没有任何争用也会做一些无用功。 会增加程序测试的复杂度，稍不注意就会出现问题。 总结可以用CAS在无锁的情况下实现原子操作，但要明确应用场合，非常简单的操作且又不想引入锁可以考虑使用CAS操作，当想要非阻塞地完成某一操作也可以考虑CAS。不推荐在复杂操作中引入CAS，会使程序可读性变差，且难以测试，同时会出现ABA问题。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>Java</category>
+        <category>并发</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>并发</tag>
+        <tag>CAS</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Java并发学习笔记]]></title>
+    <url>%2F2017%2F12%2F26%2FJava%E5%B9%B6%E5%8F%91%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0%2F</url>
+    <content type="text"><![CDATA[并发基础synchronized关键字 对某个对象加锁 当修饰静态方法或是代码块时，表示对Class对象加锁。 同步和非同步方法可以同时调用。 一般情况下要对读方法和写方法同时加锁，要不很可能会出现脏读问题。 一个同步方法可以调用另外一个同步方法，一个线程已经拥有某个对象的锁，再次申请的时候仍然会得到该对象的锁，synchronized获得的锁是可重入的。 程序在执行过程中，如果出现异常，默认情况锁会被释放。 同步代码块中的语句越少越好。 锁定某对象o，如果o的属性发生改变，不影响锁的使用，但是如果o变成另外一个对象，则锁定的对象发生改变，应该避免将锁定对象的引用变成另外的对象。 不要以字符串常量作为锁定对象，因为你的程序和你用到的类库不经意间使用了同一把锁，比如相同的字符串常量。 volatile关键字volatile只能保证可见性，但是不保证原子性。 volatile并不能保证多个线程共同修改同一变量时所带来的不一致问题，也就是说volatile不能替代synchronized。 nchronized可以保证可见性和原子性，volatile只能保证可见性。 原子操作类使用原子方式更新基本类型，共包括3个类： AtomicBoolean：原子更新布尔变量 AtomicInteger：原子更新整型变量 AtomicLong：原子更新长整型变量 解决同样的问题的更高效的方法，使用AtomXXX类，AtomXXX类本身方法都是原子性的，但不能保证多个方法连续调用是原子性的。123456789101112131415161718192021222324252627282930313233/*volatile*/ //int count = 0;AtomicInteger count = new AtomicInteger(0); /*synchronized*/ void m() &#123; for (int i = 0; i &lt; 10000; i++) //if count.get() &lt; 1000 count.incrementAndGet(); //count++&#125;public static void main(String[] args) &#123; T t = new T(); List&lt;Thread&gt; threads = new ArrayList&lt;Thread&gt;();for (int i = 0; i &lt; 10; i++) &#123; threads.add(new Thread(t::m, &quot;thread-&quot; + i));&#125;threads.forEach((o) -&gt; o.start());threads.forEach((o) -&gt; &#123; try &#123; o.join(); &#125; catch (InterruptedException e) &#123; e.printStackTrace(); &#125;&#125;);System.out.println(t.count);&#125; ThreadLocalThreadLocal线程局部变量，是使用空间换时间，synchronized是使用时间换空间。123456789101112131415161718192021222324252627282930//volatile static Person p = new Person();static ThreadLocal&lt;Person&gt; tl = new ThreadLocal&lt;&gt;();public static void main(String[] args) &#123; new Thread(()-&gt;&#123; try &#123; TimeUnit.SECONDS.sleep(2); &#125; catch (InterruptedException e) &#123; e.printStackTrace(); &#125; tl.set(new Person()); System.out.println(tl.get().name);&#125;).start();new Thread(()-&gt;&#123; try &#123; TimeUnit.SECONDS.sleep(1); &#125; catch (InterruptedException e) &#123; e.printStackTrace(); &#125; tl.set(new Person()); System.out.println(tl.get());&#125;).start(); &#125;static class Person &#123; String name = &quot;zhangsan&quot;;&#125; Java中的锁Lock接口锁能够防止多个线程同时访问共享资源。Lock接口在使用时需要显示地获取和释放锁（Synchronized是隐式的），并且是可中断、可超时获取等。12ReentrantLock1 rl = new ReentrantLock1();Lock1 r2 = new ReentrantLock1(); 队列同步器AbstractQueuedSynchronizer(AQS)队列同步器AbstractQueuedSynchronizer(AQS)，似乎我们不经常用，但是它是用来构建锁或者其他同步组件的基础框架，它使用了一个int成员变量表示同步状态，通过内置的FIFO队列来完成资源获取线程的排队工作。 重入锁推荐使用reentrantlock用于替代synchronized。 需要注意的是，必须要必须要必须要手动释放锁。使用syn锁定的话如果遇到异常，jvm会自动释放锁，但是lock必须手动释放锁，因此经常在finally中进行锁的释放。示例： 123456789101112try &#123; lock.lock(); //synchronized(this) for (int i = 0; i &lt; 10; i++) &#123; TimeUnit.SECONDS.sleep(1); System.out.println(i); &#125; &#125; catch (InterruptedException e) &#123; e.printStackTrace(); &#125; finally &#123; lock.unlock();&#125; 使用reentrantlock可以进行“尝试锁定”tryLock，这样无法锁定，或者在指定时间内无法锁定，线程可以决定是否继续等待。可以根据tryLock的返回值来判定是否锁定，也可以指定tryLock的时间，由于tryLock(time)抛出异常，所以要注意unclock的处理，必须放到finally中 12345678910 boolean locked = false; try &#123; locked = lock.tryLock(5, TimeUnit.SECONDS); System.out.println(&quot;m2 ...&quot; + locked);&#125; catch (InterruptedException e) &#123; e.printStackTrace();&#125; finally &#123; if(locked) lock.unlock();&#125; 使用ReentrantLock还可以调用lockInterruptibly方法，可以对线程interrupt方法做出响应，实现一个线程在等待锁的过程中，可以被打断。 123456789101112131415161718192021Thread t2 = new Thread(()-&gt;&#123;try &#123; //lock.lock(); lock.lockInterruptibly(); //可以对interrupt()方法做出响应 System.out.println(&quot;t2 start&quot;); TimeUnit.SECONDS.sleep(5); System.out.println(&quot;t2 end&quot;);&#125; catch (InterruptedException e) &#123; System.out.println(&quot;interrupted!&quot;);&#125; finally &#123; lock.unlock();&#125;&#125;);t2.start();try &#123; TimeUnit.SECONDS.sleep(1);&#125; catch (InterruptedException e) &#123; e.printStackTrace();&#125;t2.interrupt(); //打断线程2的等待 ReentrantLock还可以指定为公平锁 123456789101112131415161718private static ReentrantLock lock=new ReentrantLock(true); //参数为true表示为公平锁，请对比输出结果public void run() &#123; for(int i=0; i&lt;100; i++) &#123; lock.lock(); try&#123; System.out.println(Thread.currentThread().getName()+&quot;获得锁&quot;); &#125;finally&#123; lock.unlock(); &#125; &#125;&#125;public static void main(String[] args) &#123; ReentrantLock5 rl=new ReentrantLock5(); Thread th1=new Thread(rl); Thread th2=new Thread(rl); th1.start(); th2.start();&#125; 读写锁读写锁在同一时刻可以允许多个读线程访问，但是在写线程访问时，所有的读线程和其他写线程均被阻塞。读写锁维护了一对锁，一个读锁和一个写锁，通过读写分离，使得并发性相比一般的排他性锁有了很大提升。读写锁的接口为ReadWriteLock，其实现为ReentrantReadWriteLock。123ReentrantReadWriteLock rw = new ReentrantReadWriteLock();static Lock r = rw.readLock();static Lock w = rw.writeLock(); Condition接口使用Lock和Condition来实现，对比使用wait和notify/notifyAll，Condition的方式可以更加精确的指定哪些线程被唤醒。并且要像wait()使用一个while循环来做限制。123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566 final private LinkedList&lt;T&gt; lists = new LinkedList&lt;&gt;();final private int MAX = 10; //最多10个元素private int count = 0;private Lock lock = new ReentrantLock();private Condition producer = lock.newCondition();private Condition consumer = lock.newCondition();public void put(T t) &#123; try &#123; lock.lock(); while(lists.size() == MAX) &#123; //想想为什么用while而不是用if？ producer.await(); &#125; lists.add(t); ++count; consumer.signalAll(); //通知消费者线程进行消费 &#125; catch (InterruptedException e) &#123; e.printStackTrace(); &#125; finally &#123; lock.unlock(); &#125;&#125;public T get() &#123; T t = null; try &#123; lock.lock(); while(lists.size() == 0) &#123; consumer.await(); &#125; t = lists.removeFirst(); count --; producer.signalAll(); //通知生产者进行生产 &#125; catch (InterruptedException e) &#123; e.printStackTrace(); &#125; finally &#123; lock.unlock(); &#125; return t;&#125;public static void main(String[] args) &#123; MyContainer2&lt;String&gt; c = new MyContainer2&lt;&gt;(); //启动消费者线程 for(int i=0; i&lt;10; i++) &#123; new Thread(()-&gt;&#123; for(int j=0; j&lt;5; j++) System.out.println(c.get()); &#125;, &quot;c&quot; + i).start(); &#125; try &#123; TimeUnit.SECONDS.sleep(2); &#125; catch (InterruptedException e) &#123; e.printStackTrace(); &#125; //启动生产者线程 for(int i=0; i&lt;2; i++) &#123; new Thread(()-&gt;&#123; for(int j=0; j&lt;25; j++) c.put(Thread.currentThread().getName() + &quot; &quot; + j); &#125;, &quot;p&quot; + i).start(); &#125;&#125; 并发容器使用并发容器代替加锁的非并发容器。 几种key-value容器的使用场景： 快速存取键值对时可以使用HashMap。 多线程并发中存取键值对时，可以选择ConcurrentHashMap。ConcurrentHashMa使用分段锁的技术。效率比HashTable效率高。 当需要存取的键值对有序时可以使用TreeMap。TreeMap保证数据是按照Key的自然顺序或者compareTo方法指定的排序规则进行排序。底层是红黑树实现。 当需要多线程并发存取数据并且希望保证数据有序时，可以添加lock来实现ConcurrentTreeMap，但是随着并发量的提升，lock带来的性能开销也随之增大。此时可以选择ConcurrentSkipListMap提供了一种线程安全的并发访问的排序映射表。内部是SkipList（跳表）结构实现，在理论上能够O(log(n))时间内完成查找、插入、删除操作。 写时复制容器CopyOnWriteArrayList多线程环境下，写时效率低，读时效率高，适合写少读多的环境。 Collections.synchronizedList()方法可以对某一个对象的方法加锁，但肯定效率也不高。如果Synchronized加锁。12List&lt;String&gt; strs = new ArrayList&lt;&gt;();List&lt;String&gt; strsSync = Collections.synchronizedList(strs); 并发单向队列ConcurrentLinkedQueue 提供有返回值的offer()方法，可判断是否添加成功。如果使用add()，如果添加未成功则抛出异常。 poll()方法表示拿出第一个。peek()也是拿出第一个，但是不删除。 底层是单向链表实现的无界队列。 并发双端队列ConcurrentLinkedDeque 底层是双向列表实现，属于无界队列。 LinkedBlockingQueue 阻塞式队列，链表实现。使用方法 12345static BlockingQueue&lt;String&gt; strs = new LinkedBlockingQueue&lt;&gt;();strs.put(&quot;a&quot; + i); //如果满了，就会等待strs.take()); //如果空了，就会等待 属于无界队列 ArrayBlockingQueue 属于有界队列，代码如下： 123456static BlockingQueue&lt;String&gt; strs = new ArrayBlockingQueue&lt;&gt;(10);strs.put(&quot;aaa&quot;); //满了就会等待，程序阻塞//strs.add(&quot;aaa&quot;);//strs.offer(&quot;aaa&quot;);//strs.offer(&quot;aaa&quot;, 1,TimeUnit.SECONDS);//1秒钟之内加不进去就不加了 DelayQueue 属于无界队列。是有序的，等待时间最长的排在前面。 是一个无界的BlockingQueue，用于放置实现了Delayed接口的对象，其中的对象只能在其到期时才能从队列中取走。这种队列是有序的，即队头对象的延迟到期时间最长。注意：不能将null元素放置到这种队列中。 LinkedTransferQueue 如果有消费者线程，那么直接将消息送给消费者线程，而不是放在队列里面。 如果没有消费者，使用的是transfer()方法，那么将阻塞在如下代码： 1strs.transfer(&quot;aaa&quot;); 如果使用的是add()，put()方法则将加入到队列中。 队列为无界队列。 没有容量的队列SynchronousQueueSynchronousQueue是容量为0的队列，消费者必须马上消费掉，否则出现问题。使用add()方法直接抛出异常，可以使用put（）将会阻塞。 总结123456789101112131415161718192021222324252627282930313233343536371：对于map/set的选择使用不需要并发： HashMap TreeMap LinkedHashMap并发量小： Hashtable Collections.sychronizedXXX并发量大： ConcurrentHashMap 并发量大且排序：ConcurrentSkipListMap 2：队列无需并发 ArrayList LinkedList并发量小： Collections.synchronizedXXX Vector并发量大 写少，读多： CopyOnWriteList Queue CocurrentLinkedQueue //concurrentArrayQueue ConcurrentLinkedDeque BlockingQueue LinkedBlockingQueue ArrayBlockingQueue //有界 TransferQueue //可以直接传递给消费者，但会阻塞 SynchronusQueue //容量为0 DelayQueue //执行定时任务，是有序的 并发工具类常用的并发工具类有CountDownLatch，CyclicBarrier，Semaphore。用于并发流程控制。 使用Latch（门闩）替代wait notify来进行通知（不需要加锁时，如果是加锁，可能得需要Condition）: 好处是通信方式简单，同时也可以指定等待时间 使用await和countdown方法替代wait和notify CountDownLatch不涉及锁定，当count的值为零时当前线程继续运行 当不涉及同步，只是涉及线程通信的时候，用synchronized + wait/notify就显得太重了 这时应该考虑countdownlatch/cyclicbarrier/semaphore 区别如下(转载地址)： CountDownLatch 使一个线程A或是组线程A等待其它线程执行完毕后，一个线程A或是组线程A才继续执行。CyclicBarrier：一组线程使用await()指定barrier，所有线程都到达各自的barrier后，再同时执行各自barrier下面的代码。Semaphore：是用来控制同时访问特定资源的线程数量，它通过协调各个线程，以保证合理的使用公共资源。 CountDownLatch是减计数方式，计数==0时释放所有等待的线程；CyclicBarrier是加计数方式，计数达到构造方法中参数指定的值时释放所有等待的线程。Semaphore，每次semaphore.acquire()，获取一个资源，每次semaphore.acquire(n)，获取n个资源，当达到semaphore 指定资源数量时就不能再访问线程处于阻塞，必须等其它线程释放资源，semaphore.relase()每次资源一个资源，semaphore.relase(n)每次资源n个资源。 CountDownLatch当计数到0时，计数无法被重置；CyclicBarrier计数达到指定值时，计数置为0重新开始。 CountDownLatch每次调用countDown()方法计数减一，调用await()方法只进行阻塞，对计数没任何影响；CyclicBarrier只有一个await()方法，调用await()方法计数加1，若加1后的值不等于构造方法的值，则线程阻塞。CyclicBarrier的计数器计数器可以使用reset()方法重置。例如，如果计算发生错误，可以重置计数器，并让线程重新执行一次。 CountDownLatch、CyclikBarrier、Semaphore 都有一个int类型参数的构造方法。CountDownLatch、CyclikBarrier这个值作为计数用，达到该次数即释放等待的线程，而Semaphore 中所有acquire获取到的资源达到这个数，会使得其它线程阻塞。 应用场景： 由于CountDownLatch有个countDown()方法并且countDown()不会引起阻塞，所以CountDownLatch可以应用于主线程等待所有子线程结束后再继续执行的情况。await()方法应用于主线程中。 由于CyclicBarrier计数达到指定后会重新循环使用，所以CyclicBarrier可以用在所有子线程之间互相等待多次的情形，作用是让所有线程到达一个屏障是被阻塞，直到最后一个线程到达屏障时，屏障才会开门。比如在某种需求中，比如一个大型的任务，常常需要分配好多子任务去执行，只有当所有子任务都执行完成时候，才能执行主任务，这时候，就可以选择CyclicBarrier了。await()方法应用于子线程中，告诉已经到达屏障。 Semaphore可以用于做流量控制，特别公用资源有限的应用场景，比如数据库连接。示例：1234567891011121314151617181920212223public class SemaphoreCase &#123; private static final int THREAD_COUNT = 30; private static ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_COUNT); private static Semaphore s = new Semaphore(10); public static void main(String[] args) &#123; for (int i = 0; i &lt; THREAD_COUNT; i++) &#123; threadPool.execute(new Runnable() &#123; @Override public void run() &#123; try &#123; s.acquire(); System.out.println(&quot;save data&quot;); s.release(); &#125; catch (InterruptedException e) &#123; &#125; &#125; &#125;); &#125; threadPool.shutdown(); &#125; &#125; 注意： release函数和acquire并没有要求一定是同一个线程都调用，可以A线程申请资源，B线程释放资源； 调用release函数之前并没有要求一定要先调用acquire函数。 线程间交换数据ExchangerExchanger用于进行线程间的数据交换。它提供一个同步点，在这个同步点两个线程可以交换彼此的数据。 Executor框架Executor Executor是一个接口，它是Executor框架的基础。 ThreadPoolExecutor是线程池的核心实现类。 ScheduledThreadPoolExecutor是一个实现类，可以在给定的延迟后运行命令，或是定期执行命令。 Future接口和实现Future接口的FutureTask类，代表异步计算的结果。 Runnable接口和Callable接口的实现类，都可以被ThreadPoolExecutor或ScheduledThreadPoolExecutor执行。 ThreadPoolExecutor通常使用工厂类Executors来创建，可以创建3种ThreadPoolExecutor： FixedThreadPool.//固定线程数 123public static ExecutorService newFixedThreadPool(int nThreads) &#123; return new ThreadPoolExecutor(nThreads, nThreads,0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue&lt;Runnable&gt;());&#125; SingleThreadExecutor.//固定一个线程。 1234public static ExecutorService newSingleThreadExecutor() &#123; return new FinalizableDelegatedExecutorService (new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue&lt;Runnable&gt;()));&#125; CachedThreadPool.//弹性线程数，空闲线程存活时间默认为60s 12345public static ExecutorService newCachedThreadPool() &#123; return new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue&lt;Runnable&gt;());&#125; Executors可以创建2种类型的ScheduledThreadPoolExecutor： ScheduledThreadPoolExecutor.//默认等待时间最长的先运行 1234567891011121314151617 public static ScheduledExecutorService newScheduledThreadPool(int corePoolSize) &#123; return new ScheduledThreadPoolExecutor(corePoolSize);&#125;public ScheduledThreadPoolExecutor(int corePoolSize) &#123; super(corePoolSize, Integer.MAX_VALUE, 0, NANOSECONDS, new DelayedWorkQueue());&#125;public ThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue&lt;Runnable&gt; workQueue) &#123; this(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, Executors.defaultThreadFactory(), defaultHandler);&#125; SingleThreadScheduledExecutor. ExecutorServiceExecutorService是一个接口，继承了Executor，提供了submit()方法。12345ExecutorService service = Executors.newFixedThreadPool(5);service.shutdown();//所有线程跑完才关闭service.isShutdown();//马上关闭，不管跑没跑完service.isTerminated()；//所有的线程是否都已经执行完了service.isShutdown()；//线程池是否已经关闭。任务完成才关闭。 ExecutorsExecutors是一个工具类。 FutureTaskFutureTask实现Future接口和Runnable接口，可以得到一个线程返回值。12345678FutureTask&lt;Integer&gt; task = new FutureTask&lt;&gt;(()-&gt;&#123; TimeUnit.MILLISECONDS.sleep(500); return 1000;&#125;); //new Callable () &#123; Integer call();&#125;new Thread(task).start();System.out.println(task.get()); //阻塞 WorkStealingPoolWorkStealingPool会主动地拉取任务。会根据CPU的核数产生一样的线程数。WorkStealingPool的线程是daemon线程。是通过new ForkJoinPool来实现的，是对ForkJoinPool进行了封装。1234567891011121314151617181920212223242526272829303132333435363738public class T11_WorkStealingPool &#123; public static void main(String[] args) throws IOException &#123; ExecutorService service = Executors.newWorkStealingPool(); System.out.println(Runtime.getRuntime().availableProcessors()); service.execute(new R(1000)); service.execute(new R(2000)); service.execute(new R(2000)); service.execute(new R(2000)); //daemon service.execute(new R(2000)); //由于产生的是精灵线程（守护线程、后台线程），主线程不阻塞的话，看不到输出 System.in.read(); &#125; static class R implements Runnable &#123; int time; R(int t) &#123; this.time = t; &#125; @Override public void run() &#123; try &#123; TimeUnit.MILLISECONDS.sleep(time); &#125; catch (InterruptedException e) &#123; e.printStackTrace(); &#125; System.out.println(time + &quot; &quot; + Thread.currentThread().getName()); &#125; &#125;&#125; ForkJoinPool一个用于并行执行任务的框架，是一个把大任务分割成若干个小任务，最终汇总每个小任务结果后得到大任务结果的框架。ForkJoinPool的线程是精灵线程。 如果任务执行类继承的是RecursiveAction，那么没有返回值，如果是RecursiveTask则可以返回结果用于汇总。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>Java</category>
+        <category>并发</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>并发</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[记一次combogrid使用的采坑经历]]></title>
+    <url>%2F2017%2F11%2F27%2F%E8%AE%B0%E4%B8%80%E6%AC%A1combogrid%E4%BD%BF%E7%94%A8%E7%9A%84%E9%87%87%E5%9D%91%E7%BB%8F%E5%8E%86%2F</url>
+    <content type="text"><![CDATA[缘由项目需要combogrid来实现下拉列表，并且实现select下拉框刷选下拉列表内容的功能。查了官方文档，好像没有介绍combogrid添加toolbar的例子，但是看到combogrid继承了combo和datagrid，那好，应该是可以使用。 问题combogrid成功添加了toolbar实现了相关功能。但是问题来了。 当我切换到别的页面，再切回来时，发现toolbar的select框选择无效了，筛选的参数是上一次最后操作的参数，只能刷新整个浏览器页面才能生效。 当我切换到别的页面时，按F12输入$(&quot;#tb&quot;)竟然生效，id为tb的div竟然成了全局div。当输入$(&quot;[id=tb]&quot;).length是返回的结果不只是1，会随着切换次数的增加加1。 当我连着初始化combogrid两次是，toolbar竟然出现了一模一样的两个。 为什么出现这种问题，由于本人前端水平有限，一时半会也找不出答案，只能简单暴力地解决问题！ 解决方案 初始化两次combogrid，使得出现两处toolbar。如果只是初始化一次那么toolbar只是出现一次，但是[id=tb]&quot;).length的长度还是会大于1，实际上可删除的id为tb的div只有一处，那么再删掉就没意义了。 连续两次初始化完之后，接着加入以下逻辑 1234567891011 init : function() &#123; // 初始化账期控件，注意：必须初始化两次 initComboBoGrid(); initComboBoGrid(); $(&quot;[id=tb]&quot;).each(function(index,element)&#123; if(0 != index)&#123; element.remove(); &#125; &#125;); $(&quot;#tb&quot;).show();&#125; 没办法，只能简单暴力解决！]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>前端</category>
+        <category>js</category>
+        <category>EasyUI</category>
+        <category>Combo</category>
+        <category>Datagrid</category>
+        <category>Combogrid</category>
+        <category>问题</category>
+      </categories>
+      <tags>
+        <tag>js</tag>
+        <tag>EasyUI</tag>
+        <tag>Combo</tag>
+        <tag>Datagrid</tag>
+        <tag>Combogrid</tag>
+        <tag>问题</tag>
+        <tag>前端</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Java中返回一年中某一周的第一天]]></title>
+    <url>%2F2017%2F11%2F25%2FJava%E4%B8%AD%E8%BF%94%E5%9B%9E%E4%B8%80%E5%B9%B4%E4%B8%AD%E6%9F%90%E4%B8%80%E5%91%A8%E7%9A%84%E7%AC%AC%E4%B8%80%E5%A4%A9%2F</url>
+    <content type="text"><![CDATA[实现这样一个功能，根据前端的日历组件向后台传回某一年的第几周的开始日期和结束日期，日历组件的展示的日历周是以周日开始周六结束。但是当直接设置Java中Calendar对象中的年数和周数时，返回这一周第一天（周日）的日期总是对不上。后来经过同事的帮忙总与解决了，代码如下：12345678910111213141516// 获取某一周的起始时间 public static Calendar getFirstDayOfWeek(int year, int week) &#123; Calendar firDay = Calendar.getInstance(); //firDay.setFirstDayOfWeek(Calendar.SUNDAY); // 先滚动到该年 firDay.set(Calendar.YEAR, year); // 滚动到周 firDay.set(Calendar.WEEK_OF_YEAR, week - 1); firDay.set(Calendar.DAY_OF_WEEK, 0); //1天 firDay.add(Calendar.DAY_OF_YEAR, +1); return firDay; &#125;]]></content>
+      <categories>
+        <category>Java</category>
+        <category>Calendar</category>
+        <category>问题</category>
+        <category>后台</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>问题</tag>
+        <tag>Calendar</tag>
+        <tag>后台</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[EasyUI layer.tips位置出错问题解决]]></title>
+    <url>%2F2017%2F11%2F16%2FEasyUI-layer-tips%E4%BD%8D%E7%BD%AE%E5%87%BA%E9%94%99%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%2F</url>
+    <content type="text"><![CDATA[EasyUI layer.tips位置出错问题解决当在划出窗口或是弹出面板中使用layer.tips时，老是出现tips位置错误的问题。感觉是给layer.tips提供的id位置应该不是当前窗口或是面板的上的id。 在同事的建议下直接把当前对象的this参数传进来单做id，这样就解决问题了。代码片段如下：1234operation = &apos;&lt;a href=&quot;javascript:;&quot; class=&quot;btn btn-link btn-xs&quot; onmouseover=&quot;showTestTooltip(\&apos;&apos; + tipStr + &quot;&apos;,&apos;&quot; + row.id +&apos;\&apos;,this);&quot; onmouseout=&quot;hideTestTooltip(this);&quot;&gt;&apos; + &quot;tip&quot; + &apos;&lt;/a&gt;&apos;; return operation; 1234567891011showTestTooltip : function(tipStr, id, thiz) &#123; testTooltip = layer.tips( &apos;&lt;font size=&quot;2&quot;&gt;&apos;+ tipStr + &apos;&lt;/font&gt;&apos;, thiz, &#123; tips : [ 3, &apos;#3595CC&apos; ], time : 0, area : &apos;auto&apos;, maxWidth : 500, zIndex:999999 &#125;); &#125;, 由于本人前端水平有限，不知道为啥这样，但至少能够解决问题，还请大家指教！！！]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>前端</category>
+        <category>js</category>
+        <category>EasyUI</category>
+        <category>JQuery</category>
+        <category>问题</category>
+      </categories>
+      <tags>
+        <tag>js</tag>
+        <tag>EasyUI</tag>
+        <tag>Combo</tag>
+        <tag>Datagrid</tag>
+        <tag>Combogrid</tag>
+        <tag>问题</tag>
+        <tag>前端</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[使用easyUI组件combogrid面板相关问题]]></title>
+    <url>%2F2017%2F11%2F15%2F%E4%BD%BF%E7%94%A8easyUI%E7%BB%84%E4%BB%B6combogrid%E9%9D%A2%E6%9D%BF%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98%2F</url>
+    <content type="text"><![CDATA[问题使用combogrid组件时，弹出的面板宽度总是与数据框的长度一样，并不是想官方demo那样弹出理想的宽度。各种属性各种设置也没解决问题，网上找了好久也没有找到答案。 解决后来继续翻官方demo，发现了一个属性，试了一下成功了。属性如下：1panelMinWidth : &apos;50%&apos;, 还得加入fix:true,属性，使得表格大小与面板一致设置值为：50%。 下来面板中加入输入框因为combogrid继承combo以及datagrid，因此可是使用combo以及datagrid的特性。通过”toolbar”属性可以引入输入框形成组合查询。 注意问题：在Firefox浏览器中可能会出现数据框加载显示效果问题，可以先默认隐藏输入框，再在列表初始化函数中通过js显示该输入框。 设置默认选中第一行1234onLoadSuccess:function()&#123; //默认选中第一行 $(&apos;#billingReport_InvoiceTermComboBoxId&apos;).combogrid(&apos;grid&apos;).datagrid(&apos;selectRow&apos;,0);; &#125;,]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>前端</category>
+        <category>js</category>
+        <category>EasyUI</category>
+        <category>Combo</category>
+        <category>Datagrid</category>
+        <category>Combogrid</category>
+        <category>问题</category>
+      </categories>
+      <tags>
+        <tag>js</tag>
+        <tag>EasyUI</tag>
+        <tag>Combo</tag>
+        <tag>Datagrid</tag>
+        <tag>Combogrid</tag>
+        <tag>问题</tag>
+        <tag>前端</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[记一次tomcat崩溃问题排查过程]]></title>
+    <url>%2F2017%2F11%2F10%2F%E8%AE%B0%E4%B8%80%E6%AC%A1tomcat%E5%B4%A9%E6%BA%83%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B%2F</url>
+    <content type="text"><![CDATA[产品在生产环境中跑了一段时间后，每天早晨运维人员都会发现程序崩溃，无法提供服务，重启之后就好了，而且白天都没问题，运维人员因此叫苦连天。 查看日志发现有堆内存溢出的提示，并且都是发生在凌晨一点钟左右，但找不到是哪个线程导致的，重启之后通过jstack、jmap、jstat等命令查看各项指标都正常。无奈只能在catalina.sh配置文件中加入JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/.../oom.hprof&quot;配置项，当程序因为内存溢出崩溃时能够查看当时的jvm内存使用情况。 隔天早上再次发生崩溃，产生了oom.hprof文件，让运维人员传过来，导入MemoryAnalyzer中进行分析。分析过程中发现某个定时任务的线程对象占用了将近一半的堆内存，并且对象类型为： 1234567891011121314151617181920212223242526272829303132333435363738394041java.lang.Object[4102267] @ 0xe817b3f0 16,409,088 864,074,952 48.56% ..+com.mysql.jdbc.ByteArrayRow @ 0xb0176c20 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xe3044560 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xce6ac738 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xaf2ab198 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xa82fbcc0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xcbce65f8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb1b9e200 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb515f4a0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xde9fab68 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xac3662a8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xd3b9e6f8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xe3044690 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xa51149a8 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xafc57d70 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0x8f536ab0 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xd6bb6588 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb0d39428 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0x98c5da88 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xb2de5950 24 304 0.00% ..+com.mysql.jdbc.ByteArrayRow @ 0xde9fac98 通过在网上搜索答案，初步猜测是一次从数据库中读取了大量的数据到内存中导致内存溢出的崩溃问题。接着查看线程栈，定位到了线程中导致问题的某一处代码。 这一处代码做的是一个根据条件定期删除数据库的操作，这是经过本地调试发现每次做删除操作时并没有报异常，但也没删除成功。此时可以了解了问题发生的原因，由于此每次都没能成功删除数据，但是还会有新数据不断加入，日积月累数据量会越来越庞大。每次做删除操作时JPA预先加载所有要删除的数据到内存中，这时大数据量会导致JVM实例堆溢出崩溃。 定位到问题代码之后要分析一下为什么没有成功删除数据。这里要先说一下，我们项目中使用的是spring boot，持久层api使用的是spring data jpa。通过分析发现代码中没有在service层的实现类或是相关方法上加@transactional，导致的删除数据时事务不生效。 但是当我给service层实现类加上@transactional时，删除数据仍然不成功，分析代码发现，他这个service层实现类不但有implements接口，还extends抽象类，并不是纯碎的接口实现，即使直接加在方法上也不行，为什么不成功我暂时还没有时间去研究。无奈只能在repository层加，操作才成功，显然这种方法很不好！没办法，先交给代码关系人来解决吧，我也没时间和精力！]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>问题排查</tag>
+        <tag>OutOfMemoryError</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Java应用排查笔记]]></title>
+    <url>%2F2017%2F11%2F07%2FJava%E5%BA%94%E7%94%A8%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E7%AC%94%E8%AE%B0%2F</url>
+    <content type="text"><![CDATA[前一段时间跑在tomcat的java应用出现线程挂掉，CPU占用率持续过高，堆溢出的问题。首先说一下这件事的经过。 我在我的模块中有两个定时任务，使用的是spring boot的注解@Scheduled(fixedDelay=ONE_Minute)，后来出现这了两个定时任务都不再往redis缓存里面存放数据的问题。一开始没有经验，也没有打印足够的日志，所以从日志里面也看不出啥问题。 后来，我去除掉了定时任务，改成了直接new线程的方式（这种方式当然不好），并且详细打上了日志。但又出现问题了，但可喜的是这两个线程中只有一个不工作了（就是不缓存数据了，具体问题也不清楚），另外一个还很正常。这种情况出现了2到3次，我这时候还是束手无策，不知为何？ 我继续在网上搜索答案，说是用jps,jstat,jinfo,jmap,jhat,jstack这些命令可以做故障分析。下面是使用的过程。 首相使用jps查询运行tomcat的JVM虚拟机的进程： 1jps 得到一下结果： 122667 Bootstrap3116 Jps 其中Bootstrap代表的2667就是tomcat java虚拟机的进程号。有时候使用jps命令无法得到类似2667 Bootstrap的结果(好像重启tomcat之后好使)，那么可用ps -ef | grep tomcat得到进程号。 判断线程状态首先通过jstack -l pid来查看所有的线程栈,若果调用失败可使用stack -F pid强制导出。通过导出的线程堆栈信息来判断线程的状态，是否还存在？如果存在的话，处于什么状态？ 判断Java进程为何CPU占用率高可通过ps -Lfp pid或者ps -mp pid -o THREAD, tid, time或者top -Hp pid来判断java进程中哪个线程的CPU占用过高。 确定了线程的id之后，再通过jstack -l pid打印出的信息查看对应的线程的堆栈，确认线程的工作状态。参考链接：https://my.oschina.net/feichexia/blog/196575 判断OutOfMemoryError问题当发生OutOfMemoryError时希望把当时的内存数据保存下来以便于使用可视化工具（eclipse memory analyzer ）分析，可以在tomcat bin下的catalina.sh文件中加入相关参数。添加位置如下： 12345678fi# ----- Execute The Requested Command -----------------------------------------JAVA_OPTS=&quot;$JAVA_OPTS -Xms1024m -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/cloudview/data/dump/oom.hprof&quot;# Bugzilla 37848: only output this if we have a TTYif [ $have_tty -eq 1 ]; then -XX:HeapDumpPath=/cloudview/data/dump/oom.hprof表示文件保存的路径以格式。 发生OutOfMemoryError可能会导致线程异常终止，可用catch Throwable捕捉并打印最后的堆栈信息。另外不建议单独使用new线程的方式，可使用线程池来保证重启线程。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>问题排查</tag>
+        <tag>OutOfMemoryError</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第13章 线程安全与锁优化]]></title>
+    <url>%2F2017%2F11%2F04%2F%E7%AC%AC13%E7%AB%A0-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E4%B8%8E%E9%94%81%E4%BC%98%E5%8C%96%2F</url>
+    <content type="text"><![CDATA[线程安全Java语言中的线程安全我们可以将java语言中各种操作共享的数据分为以下5类： 不可变：1 final关键字修饰的变量（没有发生this引用逃逸的情况）；2 Java.lang.String类的对象，调用它的方法是只会返回一个新构造的字符串对象；3 枚举类型；4 Long和Double等数值包装类型； 绝对线程安全：Java API中标注自己是线程安全的类，大多数都不是绝对的线程安全； 相对线程安全：相对的线程安全就是我们通常意义上所讲的线程安全，它需要保证对这个对象单独的操作是线程安全的。Vector、HashTable、Collections的synchronizedCollection()方法包装的集合等都属于这种类型； 线程兼容； 线程对立； 线程安全的实现方法1. 互斥同步Java中，最基本的互斥同步手段就是synchronized关键字。首先synchronized同步块对同一条线程来说是可以重入的，不会出现自己把自己锁死的问题；其次，同步块在已进入的线程执行完之前，会阻塞后面其他线程的进入。 除了synchronized之外，我们还可以使用java.util.concurrent包中的重入锁（ReentrantLock）来实现同步。 ReentrantLock增加的高级功能： 等待可中断 可实现公平锁 锁可以绑定多个条件 2. 非阻塞同步3. 无同步方案 可重入代码 线程本地存储 锁优化 自旋锁与自适应自旋 消除锁 锁粗化 轻量级锁 偏向锁]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第12章 Java内存模型与线程]]></title>
+    <url>%2F2017%2F11%2F04%2F%E7%AC%AC12%E7%AB%A0-Java%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E4%B8%8E%E7%BA%BF%E7%A8%8B%2F</url>
+    <content type="text"><![CDATA[“内存模型”可以理解为在特定的操作协议下对特定的内存或高速缓存进行读写访问的过程抽象。 Java内存模型1 主内存与工作内存Java内存模型的主要目标是定义程序中各个变量的访问规则，即在虚拟机中将变量存储到内存和从内存中取出变量这样的底层细节。此处的变量与Java编程中所说的变量有所区别，它包括了实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不会被共享，自然就不会存在竞争问题。 工作过程：所有的变量都存储在主内存中。每条线程还有自己的工作内存（属于线程私有，类似处理器的高速缓存），线程的工作内存中保存了被该线程使用到的变量的主内存副本拷贝，线程对变量的所有操作都必须在工作内存中进行，而不能直接读写主内存中的变量，线程间变量值的传递均需要通过主内存来完成。 2 内存间交互操作Java内存模型中定义了一下8种操作来完成主内存和工作内存间的交互操作，虚拟机实现时必须保证下面提及的每一种操作都是原子的、不可再分的。 lock unlock read load use assign store write 3 对于volatile型变量的特殊规则在各个线程的工作内存中，volatile变量也可以存在不一致的情况，但是由于每次使用前都要先刷新，执行引擎看不到不一致的情况。 Java里面的运算并非原子操作，导致volatile变量的运算在并发下一样是不安全的。 使用volatile变量第一是保证此变量对所有线程的可见性。 volatile变量不安全场景： 多线程并发对volatile变量 i++; 由于volatile变量只能保证可见性，在不符合一下两条规则的运算场景中，我们仍然要通过加锁（使用synchronized或java.util.concurrent中的原子类）来保证原子性。 运算结果并不依赖变量的当前值，或者能够确保只有单一的线程修改变量的值； 变量不需要与其他的状态变量共同参与不变约束。 volatile适用场景： 使用volatile变量的第二个语义是禁止指令重排序优化。 选用volatile的意义：大多数场景下volatile的总开销仍然要比锁低，我们在volatile与锁之中选择的唯一依据仅仅是volatile的语义能否满足使用场景的需求。 4 对于long和double型变量的特殊规则目前各平台下的商用虚拟机几乎都选择把64位数据的读写操作作为原子操作来对待，因此我们在编写代码时一般不需要把用的long和double变量专门声明为volatile。 4 原子性、可见性与有序性原子性：由Java内存模型来直接保证的原子性操作包括read、load、assign、use、store和write，我们大致可以认为基本数据类型的访问读写是具备原子性的（long和double的非原子协定几乎不会发生例外情况） 可见性：可见性是指当一个线程修改了共享变量的值，其他线程能够立即得知这个修改。除了volatile之外，synchronized和final也能实现可见性。同步块的可见性是由“对一个变量执行unlock操作之前，必须把此变量同步回到主内存中”这条规则获得的，而final关键字的可见性是指：被final修饰的字段在构造器中一旦初始化完成，并且构造器没有把“this”的引用传递出去，那在其他线程中就能看见final字段的值。 有序性：Java语言提供了volatile和synchronized两个关键字来保证线程之间操作的有序性，volatile关键字本身就包含了禁止指令重排序的语义，而synchronized的锁操作决定了持有同一个锁的两个同步块只能串行地进入。 Java程序中天然的有序性可以总结为一句话：如果在本线程内观察，所有的操作都是有序的；如果在一个线程中观察另一个线程，所有的操作都是无序的。前半句是指“线程内表现为串行的语义”，后半句是指“指令重排序”线程和“工作内存与主内存同步延迟”现象。 6 先行发生原则Java内存模型下一些“天然的“先行发生关系，这些先行发生关系无须任何同步器协助就已经存在，可以在编码中直接使用。 程序次序规则 管道锁定规则 volatile变量规则 线程启动规则 线程终止规则 线程中断规则 对象终结规则 传递性 Java与线程java线程的实现对于Sun JDK来说，它的Windows版与Linux版都是使用一对一的线程模型实现的，一条Java线程就映射到一条轻量级进程之中。 Java线程调度调度方式有两种： 协同式线程调度 抢占式线程调度 状态转换Java定义了5中线程状态 新建（NEW） 运行（Runable）：Runable包括操作系统线程状态中的Running和Ready。 无期限等待（Waiting） 期限等待（Timed Waiting） 阻塞（Blocked） 结束（Terminated）]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[解决JavaMail邮件出现base64乱码的问题]]></title>
+    <url>%2F2017%2F11%2F04%2F%E8%A7%A3%E5%86%B3JavaMail%E9%82%AE%E4%BB%B6%E5%87%BA%E7%8E%B0base64%E4%B9%B1%E7%A0%81%E7%9A%84%E9%97%AE%E9%A2%98%2F</url>
+    <content type="text"><![CDATA[问题本机进行邮件发送没出现问题，但是放到某些linux环境中则出现邮件内容是现实base编码的问题：12345678910111213------=_Part_3_2039075268.1524573999534Content-Type: text/html; charset=utf-8Content-Transfer-Encoding: base64 PHA+5ZGK6K2m5L+h5oGv5aaC5LiL77yaPGJyPumhueebriAmbmJzcDsgJm5ic3A7ICZuYnNwOyAmbmJzcDsgJm5ic3A7ICZuYnNwOyAmbmJzcDvkv6Hmga88YnI+5ZGK6K2m5a6e5L2TIO+8mndpbmRvd3Nf57qz566h5rWL6K+VPGJyPuWRiuitpuWQjeensCDvvJromZrmi5/mnLrnm67lvZXkuI3kuIDoh7Q8YnI+5ZGK6K2mSUQgJm5ic3A7ICZuYnNwOyDvvJpjbS1hbGFybS0xMDxicj7lkYrorabmj4/ov7Ag77ya6Jma5ouf5py6ICB3aW5kb3dzX+e6s+euoea1i+ivleW3sue7j+iiq+enu+iHs+aWh+S7tuWkuSB2bSE8YnI+5ZGK6K2m57qn5YirIO+8muS4pemHjeWRiuitpjxicj7lkYrorabml7bpl7Qg77yaMjAxOC0wNC0yNCAyMDo0NToyOTxicj48YnI+5aaC5pyJ55aR6Zeu77yM6K+35LiO57O757uf566h55CG5ZGY6IGU57O744CCPC9wPg==------=_Part_3_2039075268.1524573999534-- 一开始以为是编码没设置好，但是本地测试或是在某些linux环境中测试都没问题。 问题解决后来通过网上寻找答案，发现其实是环境中引入了无用的包，使得包冲突导致，连接如下： javamail 发送邮件 内容乱码问题的解决 spring mail 发送邮件，没有主题，没有收件人，显示乱码问题 引入的多余jar包如下： 解决方法：将此jar包删除即可！]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>JavaMail</tag>
+        <tag>base64</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Hyper-V之WMI、J-Interop]]></title>
+    <url>%2F2017%2F11%2F03%2FHyper-V%E4%B9%8BWMI%E3%80%81J-Interop%2F</url>
+    <content type="text"><![CDATA[概述经过调研发现要通过调用WMI接口来实现对Hyper-V的管理，由于之前没有相关的经验所以通过网上搜索来理解什么是WMI。 关于使用何种编程语言调用WMI，微软官网给出的是封装很友好的c#和powershell脚本接口，但目前公司的开发语言主要为Java，所以经过调研是能使用J-Interop。J-Interop是一个基于Java语言的WMI封装库，但是用方式还是太过于原始，使用上不是很友好，还得需要进一步封装，当然这一部分不在本文的编写范围内。 什么是WMI？官网介绍是： Windows Management Instrumentation (WMI) is the Microsoft implementation of Web-Based Enterprise Management (WBEM), which is an industry initiative to develop a standard technology for accessing management information in an enterprise environment. WMI uses the Common Information Model (CIM) industry standard to represent systems, applications, networks, devices, and other managed components. CIM is developed and maintained by the Distributed Management Task Force (DMTF). About WMI.aspx) 以下WMI相关的内容转载自：http://blog.csdn.net/ilovepxm/article/details/6690224 WMI的组成？严格说来，WMI由四部分组成： 公共信息模型对象管理器——CIMOM 公共信息模型——CIM WMI提供程序 WMI脚本对象库其中其第1、2、3三个部分，在使用中很少加以区别，我们一般统称为CIM库。用WMI脚本对象库访问cim库。本质：是一个带很多分支的树状数据库，是一项服务！ WMI能做什么？利用WMI可以高效地管理远程和本地的计算机.WMI是WBEM模型的一种实现。 WBEM模型最关键的部分是它的数据模型（或描述和定义对象的方式）、编码规范（Encoding Specification），以及在客户端和服务器端之间传输数据的模式。CIM即WBEM的数据模型！ CIM是一个用来命名计算机的物理和逻辑单元的标准的命名系统（或称为命名模式），例如硬盘的逻辑分区、正在运行的应用的一个实例，或者一条电缆。 WBEM模型：基于web的企业管理，为管理企业环境开发一套标准接口集。 WMI作为一种规范和基础结构，通过它可以访问、配置、管理和监视几乎所有的Windows资源，比如用户可以在远程计算机器上启动一个进程；设定一个在特定日期和时间运行的进程；远程启动计算机；获得本地或远程计算机的已安装程序列表；查询本地或远程计算机的Windows事件日志等等。 WMI通过提供一致的模型和框架，所有的 Windows 资源均被描述并公开给外界。最好的一点是，系统管理员可以使用 WMI 脚本库创建系统管理脚本，从而管理任何通过 WMI 公开的 Windows 资源！ 什么是J-Interop？官网介绍如下： j-Interop is a Java Open Source library (under LGPL) that implements the DCOM wire protocol (MSRPC) to enable development of Pure, Bi-Directional, Non-Native Java applications which can interoperate with any COM component. The implementation is itself purely in Java and does not use Java Native Interface (JNI) to provide COM access. This allows the library to be used from any Non-Windows platform. It comes with pre-implemented packages for automation. This includes support for IDispatch, ITypeInfo, and ITypeLib. For more flexibility (in the cases where automation is not supported), it provides an API set to directly invoke operations on a COM server. Another important feature is allowing full access and manipulation (C-R-U-D) of the Windows Registry in a platform independent manner.The implementation has been tested on all advanced Windows and Fedora platform(s) and displays upward compatibility from JRE 1.3.1. 通过J-Interop就可以实现对WMI的访问。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>Hyper-V</category>
+      </categories>
+      <tags>
+        <tag>Hyper-V</tag>
+        <tag>虚拟化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[在Hyper-V系列文章之前]]></title>
+    <url>%2F2017%2F11%2F03%2F%E5%9C%A8Hyper-V%E7%B3%BB%E5%88%97%E6%96%87%E7%AB%A0%E4%B9%8B%E5%89%8D%2F</url>
+    <content type="text"><![CDATA[目前正在做公司的项目就快要验收了，打算将项目中与Hyper-V相关的笔记做一个整理。项目中我们的云管平台需要接管用户的hyper-v虚拟机，能够实现对Hyper-V虚拟机的新建、删除、修改、启动、停止、web console、客户端 console等功能，由于首次接触Hyper-V相关的东西，我的Hyper-V系列文章主要记录我的一些学习过程，希望我记录的东西能够帮助到大家，因为能够完成这个项目阶段的开发也是离不开大家的帮助。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>Hyper-V</category>
+      </categories>
+      <tags>
+        <tag>Hyper-V</tag>
+        <tag>虚拟化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[git使用教程]]></title>
+    <url>%2F2017%2F11%2F03%2Fgit%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B%2F</url>
+    <content type="text"><![CDATA[打算要复习一下git的使用方法，搜了几篇不错的文章。我就不直接照搬全文了，连接如下： 比较全面的教程： Git使用教程,最详细，最傻瓜，最浅显，真正手把手教 针对几种应用场景的教程： git入门，先学会这几个姿势 常用命令详解：Git常用命令备忘，希望对学习Git的朋友们有所帮助 git进阶： 25个 Git 进阶技巧]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+        <tag>教程</tag>
+        <tag>版本控制系统</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第8章 虚拟机字节码执行引擎]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC8%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%AD%97%E8%8A%82%E7%A0%81%E6%89%A7%E8%A1%8C%E5%BC%95%E6%93%8E%2F</url>
+    <content type="text"><![CDATA[在不同的虚拟机实现里面，执行引擎在执行Java代码的时候可能会有解释执行（通过解释器执行）和编译执行（通过即时编译器产生本地代码执行）两种选择，可能能两者兼备，甚至还可能会包含几个不同级别的编译器执行引擎。 运行时栈帧结构栈帧是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈的栈元素。 栈帧存储了方法的局部变量表、操作数栈、动态链接和方法返回地址等信息。 在编译程序代码的时候，栈帧中需要多大的局部变量表，多深的操作数栈都已经完全确定了，并且写入到方法表的Code属性中，因此一个栈帧需要分配多少内存，不会受到程序运行期变量数据的影响，而仅仅取决于具体的虚拟机实现。 局部变量表局部变量表是一组变量值存储空间，用于存放方法参数和方法内部定义的局部变量。 reference类型表示对一个对象实例的引用，虚拟机实现至少都应当能通过这个引用做到两点： 从此引用中直接或间接地查找到对象在Java堆中的数据存放的起始地址索引。 此引用中直接或间接地查找到对象所属数据类型在方法区中的存储的类型信息，否则无法实现Java语言规范中定义的语法约束约束。 Java语言中明确的64位的数据类型只有long和double两种。对于64位的数据类型，虚拟机会以高位对齐的方式为其分配两个连续的Slot空间。 虚拟机通过索引定位的方式使用局部变量表，索引值的范围是从0开始至局部变量表最大的Slot数量。 局部变量表中第0位索引的Slot默认是用于传递方法所属对象是的引用，在方法中可通过关键字“this”来访问到这个隐藏的参数。其余参数则按照参数表顺序排列，参数表分配完毕后，再根据方法体内部定义的变量顺序和作用与分配其余的Slot。 局部变量与类变量不一样，如果一个局部变量定义了但没有赋初始值是不能使用的，不要认为java中任何情况下都存在诸如整型变量默认为0，布尔型变量默认为false等，如以下代码 12345//未赋值的局部变量public static void main(String [] args)&#123; int a; System.out.println(a);&#125; 操作数栈（理解是充当寄存器的角色）操作数栈也常称为操作栈，它是一个后入先出栈。同局部变量表一样，操作数栈的最大深度也在编译的时候写入到Code属性的max_stacks数据项中。 操作数栈的每一个元素可以是任意的Java数据类型。32位数据类型所占的栈容量为1,64位数据类型所占的栈容量为2。 动态连接每个栈帧都包含一个指向运行时常量池中该栈帧所属方法的引用，持有这个引用是为了支持方法调用过程中的动态连接。 方法返回地址当一个方法开始执行后，只有两种方式可以退出这个方法： 正常退出 异常退出 方法推出的过程实际上就等同于把当前栈帧出栈，因此退出是可能执行的操作有： 回复上层方法的局部变量表和操作数栈； 把返回值压入调用者栈帧的操作数占中； 调整PC计数器的值以指向方法调用指令后面的一条指令等； 附加信息方法调用方法调用不等于方法执行，方法调用阶段唯一的任务就是确定被调用方法的版本，暂时还不涉及方法内部的具体运行过程。 解析所有方法调用中的目标方法在Class文件里面都是一个常量池中的符号引用，在了加载的解析阶段，会将其中的一部分符号引用转化为直接引用。 静态方法、私有方法、实例构造器、父类方法、被final修饰的方法都适合在类加载阶段进行解析，将符号引用解析为该方法的直接引用，这些方法称为非虚方法。 解析调用一定是以静态的过程，在编译期间就完全确定，在类装载的解析阶段就会把涉及的符号引用全部转变为可确定的直接引用，不会延迟到运行期再去完成。 分派分派调用过程将会揭示多态性特征的一些最基本的体现。 1 静态分派静态方法会在类加载期就进行解析，而静态方法显然也是可以拥有重载版本的，选择重载版本的而过程也是通过静态分派完成的。 2 动态分派它和多态性的另外一个重要体现—*重写有着很密切的关系。 3 单分派和多分派方法的接受者与方法的参数统称为方法的宗量，单分派是根据一个宗量对目标方法进行选择，多分派则是根据多于一个宗量对目标方法进行选择。 今天的Java语言是一门静态多分派、动态单分派的语言。 4 虚拟机动态分派的实现使用虚方法表索引来代替元数据查找以提高性能。 方法表一般在类加载的连接阶段进行初始化，准备了类的变量初始值后，虚拟机会把该类的方法表也初始化完毕。 动态类型语言支持(重要)什么是动态类型语言：动态类型语言的关键特征是它的类型检查的主题过程是在运行期而不是编译期。 与运行时异常相对应的是连接时异常，例如很常见的NoClassDefFoundError便属于连接时异常。 基于栈的字节码解释执行引擎解释执行Javac编译器代码经过词法分析、语法分析到抽象语法树，再遍历语法树生成线性的字节码指令流的过程，Java程序的编译就是半独立的实现。 基于栈的指令集与基于寄存器的指令集Java编译器输出的指令流，基本上是一种基于栈的指令集架构，指令流中的指令大比分都是零地址指令，它们依赖操作数栈进行工作。 基于栈的指令集主要的优点： 可移植； 代码相对更加紧凑 编译更加简单等 缺点： 完成相同功能需要的指令数量多。 频繁地访问内存，相对处理器来说，内存始终是执行速度额瓶颈； 基于栈的解释器执行过程]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第7章 虚拟机类加载机制]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC7%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6%2F</url>
+    <content type="text"><![CDATA[虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的Java类型，这就是虚拟机的类加载机制。 在Java语言里，类型的加载、连接和初始化都是在程序运行期间完成的。 类加载的时机类从被加载到虚拟机内存中开始，到卸载出内存为止，它的整个生命周期包括：加载、验证、准备、解析、初始化、使用和卸载。其中验证、准备、解析3个部分统称为连接。 解析阶段不一定：它在某些情况下可以在初始化阶段之后再开始，这个是为了支持Java语言的运行时绑定（也称动态绑定或晚期绑定）。 对于初始化阶段，虚拟机规范则是严格规定了有且只有5中情况必须立即对类进行“初始化”（而加载、验证、准备自然需要在此之前开始）： 遇到new、getstatic、putstatic或invokestatic这4条字节指令时，如果类没有进行过初始化，则需要先触发其初始化。 使用java。lang.reflect包的方法对类进行反射调用的时候，如果类没有进行过初始化，则需要先触发其初始化。 当初始化一个类的时候，如果发现其父类还没有进行过初始化，则需要先触发其父类的初始化。 当虚拟机启动时，用户需要制定一个要执行的主类，虚拟机会先初始化这个主类。 5 当使用JDK1.7动态语言支持是，……. 这5中场景中的行为成为对一个类进行主动引用，除此之外，所有引用类的方式都不会触发初始化，成为被动引用。 类加载过程类加载的全过程，也就是加载、验证、准备、解析和初始化这个5个阶段。 1 加载在加载阶段，虚拟机需要完成一下3件事情： 通过一个类的全限定名来获取定义此类的二进制字节流。 将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构。 在内存中生成一个代表这个类的java.lang.Class对象，作为方法区这个类的各种数据的访问入口，对于HotSpot虚拟机而言，Class对象比较特殊，它虽然是对象，但是存放在方法区里面。 数组类本身不通过类加载器创建，它是由Java虚拟机直接创建的。 2 验证验证是连接阶段的第一步，目的是为了确保Class文件的字节流中包含的信息符合当前虚拟机的要求，并且不会危害虚拟机自身的安全。 验证阶段的4个检验动作： 文件格式验证：通过这个阶段的验证后，字节流才会进入内存的方法区中进行存储，所以后面的3个验证阶段全部都是基于方法区的存储结构进行的，不会再直接操作字节流。 元数据验证 字节码验证：确定程序语义是合法的、符合逻辑的。 符号引用验证 3 准备准备阶段是正式为类变量分配内存并设置类变量初始值的阶段，这些变量所使用的内存都将在方法区中进行分配。 注意：首先，这时候进行内存分配的仅包括类变量（被static修饰的变量），而不包括实例变量，实例变量将会在对象实例化时随着对象一起分配在Java堆中。其次，这里所说的初始值“通常情况”下是数据类型的零值。java程序的初始值赋值动作在初始化阶段才会执行。 特殊情况：如果类字段的字段属性表存在ConstantValue属性，那在准备阶段变量value就会被初始化为ConstantValue属性所指定的值，假设上面类变量value的定义为： public static final int value = 123 编译时javac将会为value生成ConstantValue属性，在准备阶段虚拟机就会根据ConstantValue的设置将value赋值为123。因为关键字不但有static，还有final。 4 解析解析阶段是虚拟机将常量池内的符号引用替换为直接引用的过程。解析动作主要针对类或者接口、字段、类方法、接口方法、方法类型、方法句柄和调用点限定符7类符号引用进行，分别对应于常量池的……..。 5 初始化类初始化阶段是类加载过程的最后一步。到了初始化阶段，才真正开始执行类中定义的Java程序代码（或者说字节码），是执行类构造器()方法的过程。 父类中定义的静态语句块要优先于子类的变量赋值操作。 类与类加载器双亲委派模型从Java虚拟机的角度将，只存在两种不同类型的类加载器：一种是启动类加载器，是虚拟机自身的一部分；另一种就是所有其他的类加载器。独立于虚拟机外部，并且全都继承自抽象类java.lang.ClassLoader。 3种类型的类加载器： 启动类加载器：加载\lib目录中的并且是虚拟机识别的类库加载到虚拟机内存中。改加载器无法被Java程序直接引用。 扩展类加载器：加载\lib\ext目录中的类库。开发者可以直接使用。 应用程序类加载器：负责加载用户类路径（ClassPath）上所指定的类库。 如果有必要，还可以加入自己定义的类加载器。 这里类加载器之间的父子关系一般不会以继承的关系来实现，而是都使用组合关系来复用父类加载器的代码。 双亲委派模型的工作过程：……..。 破坏双亲委派模型]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第6章 类文件结构]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC6%E7%AB%A0-%E7%B1%BB%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84%2F</url>
+    <content type="text"><![CDATA[无关性的基石各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。无关性： 平台无关性 语言无关性实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。 Class类文件的结构 任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来说，类或接口并不一定都得定义在文件里。 Class文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑第排列在Class文件中，中间没有任何分隔符。当遇到需要占用8位字节以上空间的数据项时，则会按照高位在前的方式分割成若干个8位字节进行存储（大端模式）。 Class文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构中只有两种数据类型：无符号数和表。 无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8编码构成字符串。 表是由多个无符号数或者其他表作为数据项构成的复合数据类型，所有表都习惯性地以“_info”结尾。整个Class文件本质上就是一张表。 魔数与Class文件的版本 每个Class文件的头4个字节称为魔数，唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件，使用魔数不是扩展名来进行识别主要是基于安全方面的考虑，值为：0xCAFEBABE。 紧接着魔数的4个字节存储的是Class文件的版本号：第5和第6个字节是次版本号，第7和第8个字节是主版本号。 常量池紧接着主次版本号之后的是常量池入口，常量池可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，也是占用Class文件空间最大的数据项目之一，同时他还是在Class文件中第一个出现的表类型数据项目。 常量池容量计数器是从1开始计数的，表示常量的个数。常量翅中主要存放两大类常量： 字面量 符号引用 字面量比较接近于Java语言层面的常量概念，如字符串、声明为final的常量值等。而符号引用则属于编译原理方面的概念，包括了下面的三类常量： 类和接口的全限定名 字段的名称和描述符 方法的名称和描述符常量池中每一个常量都是一个表。 常量池容量为21，表示有21项常量 由于Class文件中方法、字段等都需要引用CONSTANT_Utf8_info型常量来描述名称，所以CONSTANT_Utf8_info型常量的最大长度也就是Java中方法、字段名的最大长度。而这里的最大长度就是length的最大值，既u2类型能表达的最大值65535.所以Java程序中如果定义了超过65KB因为字符串的变量或方法名将会无法编译。 javap工具用于分析Class文件字节码的。 访问标志这个标志用于识别一些类或者是接口层次的访问信息。 类索引、父类索引与接口索引集合Class文件中由这三项数据来确定这个类的继承关系。 字段表集合字段表用于描述接口库或者类中声明的变量。 字段包括类级变量以及实例级变量，但不包括在方法内部声明的局部变量。 字段表集合中不会列出从超类或者父类接口中继承而来的字段，但有可能列出原本Java代码中不存在的字段。对于字节码来说，如果两个字段的描述符不一致，那字段重名就是合法的。 方发表集合volatile关键字和transient关键字不能修饰方法，所以方发表的访问标志中没有了ACC_VOLATITE标志和ACC_TRANSIENT标志。 属性表集合在Class文件、字段表、方发表都可以携带自己的属性表集合，以用于描述某些场景专有的信息。操作栈数？max_stack代表了操作数栈深度的最大值。在方法执行的任意时刻，操作栈数都不会超过这个深度。虚拟机运行的时候需要根据这个值来分配栈帧中的操作栈深度。 1 Code属性了解Code属性是学习后面关于字节码执行引擎内容的必要基础，能直接阅读字节码也是工作中分析Java代码语义问题的必要工具和基本技能。 使用Javap 命令计算字节码指令： javap -verbose TestClass 在实例方法的局部变量表中至少会存在一个指向当前对象实例的局部变量，局部变量表中也会预留第一个Slot位来存放对象实例的引用，方法参数值从1开始计算。，这个处理只对实例方法有效。 2 Exceptions属性Exceptions属性的作用是列举出方法中可能抛出的受检查异常(Checked Exceptions)，也就是方法描述时在throws关键字后面列举的异常。 3 LineNumberTable属性LineNumberTable属性用于描述Java源码行号与字节码行号之间的对应关系。 4 LocalVariableTable属性LocalVariableTable属性用于描述栈帧中局部变量表中的变量与Java源码中定义的变量之间的关系 5 SourceFile属性SourceFile属性用于记录生成这个Class文件的源码文件名称。 6 ConstantValue属性ConstantValue属性的作用是通知虚拟机自动为静态变量赋值。onstantValue的属性值只能限于基本类型和String。 7 InnerClasses属性InnerClasses属性用于记录内部类与宿主类之间的关联。 8 Deprecated及Synthetic属性9 StackMapTable属性10 Signature11 BootstrapMethods属性字节码指令简介Java虚拟机的指令由一个字节长度、代表着某种特定操作含义的数字（称为操作码，Opcode）以及跟随其后的零至多个代表此操作所需参数（称为操作数，Operands）而构成。 1 字节码与数据结构阅读字节码作为了解Java虚拟机的基础技能，是一项应当熟练掌握的能力。 2 加载和存储指令加载和存储指令用于将数据在栈帧中的局部变量表和操作数栈之间来回传输。 3 运算指令运算指令用于对两个操作数栈上的值进行某种特定运算，并把结果重新存入到操作栈顶。 算术指令分为两种： 对整型数据进行运算的指令。 对浮点型数据进行运算的指令。 无论哪种算术指令，都使用Java虚拟机的数据类型，由于没有直接支持byte，short，char和boolean类型的算术指令，对于这类数据的运算，应使用操作int类型的指令代替。 4 类型转换指令5 对象创建与访问指令6 操作数栈管理指令操作数栈的指令： 将操作数栈的栈顶一个或两个元素出栈：pop、pop2。 复制栈顶一个或两个数值并将复制值或双份的复制值重新压入栈顶：dup、dup2、dup_x1、dup_x2、dup2_x2。 将栈最顶端的两个数值互换：swap。 7 控制转移指令8 方法调用和返回指令9 异常处理指令10 同步指令共有设计和私有设计]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第5章 调优案例分析与实战]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC5%E7%AB%A0-%E8%B0%83%E4%BC%98%E6%A1%88%E4%BE%8B%E5%88%86%E6%9E%90%E4%B8%8E%E5%AE%9E%E6%88%98%2F</url>
+    <content type="text"><![CDATA[高性能硬件上的程序部署策三大块非用户程序时间： 编译时间 垃圾收集时间 GC时间 新生代minor GC 老年代Full GC编译时间是指虚拟机的JIT编译器编译热点代码的耗时。Java的运行时编译最大的缺点就是它进行编译需要消耗程序正常的运行时间。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第4章 虚拟机性能监控与故障处理工具]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC4%E7%AB%A0-%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%80%A7%E8%83%BD%E7%9B%91%E6%8E%A7%E4%B8%8E%E6%95%85%E9%9A%9C%E5%A4%84%E7%90%86%E5%B7%A5%E5%85%B7%2F</url>
+    <content type="text"><![CDATA[概述给定一个系统定位问题的时候，只是、经验是关键基础，数据时依据，工具是运用知识处理数据的手段。这里说的数据包括：运行日志、异常对战、GC日志、线程快照（threaddump/jvacore文件）、堆转存储快照（headdump/hprof文件）等。 JDK的命令行工具 解决liunx下jstat无法查看虚拟机状态的问题：连接。 启动后,这时候使用jstat查看该tomcat的状态提示pid not found,使用jps也没有这条信息,但是ps查看明明就有,顿时感觉很坑爹.一顿查找资料后,逐步解决.首先java进程会向/tmp里写文件,路径为hsperfdata$user/$pid,如果在tmp下没有这个文件jps就会查找不到这个线程.如果tmp下的java临时文件有误就会提示xx – process information unavailable,这时候把tmp下hsperfdata这样的都删了,然后重启java程序,再使用jps就能正常输出结果了. 然后tomcat的catalina.sh里开头设置CATALINA_TMPDIR=/tmp,这样下面的脚本执行-Djava.io.tmpdir=\”$CATALINA_TMPDIR\” \,这样就可以达到效果是加上java参数-Djava.io.tmpdir=/tmp.这时候重启tomcat后,输入jstat -gcutil pid,就可以显示jvm的情况了]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第3章 垃圾收集器与内存分配策略]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC3%E7%AB%A0-%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E4%B8%8E%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5%2F</url>
+    <content type="text"><![CDATA[概述 每个栈中的栈帧随着方法的进入和退出而有条不紊地执行着出栈和入栈操作，每一个栈帧中分配多少内存基本上是在类结构确定下来是就已知的。 程序计数器、虚拟机栈、本地方法栈这几个区域的内存分配和回收都具备确定性，不需要过多考虑回收的问题，因为方法结束或者线程结束时，内存自然就跟着回收了。而java堆和方法区则不一样。 对象已死吗Java堆回收 主流的java虚拟机里面没有选用引用计数器算法来管理内存，其中最主要的原因是它很难解决对象之间互相循环引用的问题。 通过可达性分析算法来判定对象是否存活着，算法思路：通过一系列的称为“GC Roots”的对象作为起始点，从这些节点开始向下搜索，搜索所走过的路径称为引用链（Reference Chain），当一个对象到GC Roots没有任何引用链相连时，则证明此对象是不可用的。 可作为GC Roots的对象包括下面几种: 虚拟机栈（栈帧中的本地变量表）中引用的对象。 方法区中类静态属性引用的对象 方法区中常量引用的对象 本地方法栈中JNI引用的对象 java将引用分为强引用、软引用、弱引用、虚引用，引用强度逐渐减弱。 可达性分析算法中不可达的对象，也并非是“非死不可”的，这时候它们暂时处于“缓刑”阶段，要真正宣告一个对象死亡，至少要经历两次标记过程。 finalize()方法中对象逃脱死亡命运的最后一次机会。 任何一个对象的finalize()方法都只会被系统自动调用一次，如果对象面临下一次回收，它的finalize()方法不会再次被执行。尽量避免使用它。 方法区回收 Java虚拟机规范中确实说过可以不要求虚拟机在方法区(永久代)实现垃圾收集。 永久代的垃圾回收主要回收两部分内容：废弃产量和无用的类。 无用的类： 该类所有的实例都已经被回收，也就是Java堆中不存在该类的任何引用。 加载该类的ClassLoader已经被回收。 该类对用的java.lang.Class对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。 垃圾收集算法 什么是新生代、永久代、老年代 HotSpot的算法实现以下是介绍如何发起内存回收，还没回收： 枚举根节点； 安全点中断方式：抢先式中断、主动式中断，几乎没有虚拟机采用抢先式中断； 安全区域：解决了“不执行的线程”无法到达安全点的问题。安全区域是指在一段代码片段之中，引用关系不会发生变化。 垃圾收集器（真正回收）真正回收垃圾 Serial收集器（新生代收集器，client模式下是很好的选择，单CPU下效果好） ParNew收集器：Serial多线程版本（Server模式下首选新生代收集器） Parallel Scavenge收集器（新生代）：吞吐量优先的收集器 Serial Old收集器（老年代） CMS收集器（老年代）：以获取最短回收停顿时间为目标的收集器。步骤： 初始标志 并发标志 重新标志 并发清除 G1收集器（新生代、老年代），优点： 并行与并发 分代收集（新生代、老年代） 空间整合（整体：标记-整理实现，局部复制算法实现） 可预测的停顿 步骤： 初始标记 并发标记 最终标记 筛选回收 理解GC日志阅读GC日志是处理Java虚拟机内存问题的基础技能。 内存分配与回收策略给对象分配内存，对象主要分配在新生代的Eden区上，如果启动了本地线程分配缓冲，将按线程优先在TLAB上分配。 几条最普遍的内存分配规则 对象优先在Eden分配，-Xmn10M表示10M分配给了新生代；-XX:SurvivorRatio=8决定了新生代中Eden区与一个Survivor区的空间比例是8:1. Minor GC和Full GC有什么不一样吗？ 大对象直接进入老年代最典型的大对象就是那种很长的字符串以及数组。虚拟机提供了一个-XX:PretenureSizeThreshold参数，令大于这个设置值的对象直接在老年代分配。 长期存活的对象将进入老年代 对象晋升老年代的年龄阈值，可以通过参数：-XX:MaxTenuringThreshold设置。 1 对象优先在Eden中分配，当Eden中没有足够的空间分配时会促发一次Minor GC。每次Minor GC结束后，Eden区会清空，因为它会把Eden中还依然存活的对象放到Survivor中，当Survivor中放不下时，则由分派担保进入老年代中。2 大对象直接进入老年代中。-XX:+PretenuerSizeThreshold 控制”大对象的“的大小。即当创建的对象大于这个临界值时，则该对象直接进入老年代。3 长期存活的对象将进入老年代。虚拟机对每个对象定义了一个对象年龄（Age）计数器。当年龄增加到一定的临界值时，就会晋升到老年代中，该临界值由参数：-XX:MaxTenuringThreshold来设置。如果对象在Eden出生并在第一次发生Minor GC时仍然存活，并且能够被Survivor中所容纳的话，则该对象会被移动到Survivor中，并且设Age=1；以后每经历一次Minor GC，该对象还存活的话会被移动到另一个Survivor区中，并且Age=Age+1。4 动态对象年龄判定：如上所示，虚拟机并不总是要求对象的年龄必须达到MaxTenuringThreshold才能晋升到老年代，如果在Survivor区中相同年龄（设年龄为age）的对象的所有大小之和超过Survivor空间的一半，年龄大于或等于该年龄（age）的对象就可以直接进入老年代，无需等到MaxTenuringThreshold中要求的年龄。 动态对象年龄判定如果在Survivor空间中相同年龄所有对象大小的总和大于Survivor空间的一半，年龄大于或等于该年龄的对象就可以直接进入老年代，无须等到MaxTenuringThreshold中要求的年龄。 空间分配担保每一次回收晋升到老年代对象容量的平均大小值最为经验值，与老年代的剩余空间进行比较，决定是否进行Full GC来让老年代腾出更多的空间。老年代空间不足会出现担保失败。 总结内存回收与垃圾收集器在很多时候都是影响系统性能、并发能力的主要因素之一，虚拟机之所以提供多种不同的收集器以及提供大量的调节参数，是因为只有根据实际应用需求、实现方式选择最优的收集方式才能获取最高的性能。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第2章 Java内存区域与内存溢出异常]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC2%E7%AB%A0-Java%E5%86%85%E5%AD%98%E5%8C%BA%E5%9F%9F%E4%B8%8E%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%BC%82%E5%B8%B8%2F</url>
+    <content type="text"><![CDATA[计数器 字节码解释器工作时通过改变计数器的值来选取下一条需要执行的字节码指令。 每个线程有独立的计数器。 如果正在执行的是Native方法，这个计数器值为空（Undefined)。 计数器的内存区域是唯一一个在Java虚拟机规范中没有规定任何OutOfMemoryError情况的区域。 虚拟机栈 与计数器一样，虚拟机栈也是线程私有的，生命周期与线程相同。 描述的是Java方法执行的内存模型 栈帧是方法运行时的基础数据结构。 Java虚拟机规范对这个区域规定了两种异常情况：如果线程请求的栈深度大于虚拟机所允许的深度，将抛出StackOverflowError异常；如果虚拟机栈可以动态扩展，扩展时无法申请到足够的内存，就会抛出OutOfMemoryError异常。本地方法栈 为虚拟机使用到的Native方法服务。 本地方法栈也会抛出StackOverflowError和OutOfMemory异常。 与虚拟机栈的作用相似。 Java堆 Java堆是被所有线程共享的一块内存区域，在虚拟机启动时创建。以为目的是存放对象实例。 是垃圾收集器管理的主要区域。 堆中没有内存完成实例分配，并且堆也无法再扩展时，将会抛出OutOfMemoryError异常。 方法区 也是各个线程共享的内存区域，用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。 除了和java堆一样不需要连续的内存和可以选择规定大小或者可扩展外，还可以选择不实现垃圾收集。 这区域的内存回收目标主要是针对常量池的回收和对类型的卸载。 无法满足内存分配的需求时，将会抛出OutOfMemoryError异常。 运行时常量池 是方法区一部分。 常量池用于存放编译器生成的各种字面量和符号引用，这部分内容将在类加载后进入方法区的运行时常量池存放。 直接内存 NIO 对象的创建 对象在堆上的内存分配方式分为指针碰撞和空闲列表。 对象内存空间分配完成后，内存空间都初始化为零值。 对象的内存布局 在内存中的布局分为3块区域：对象头、实例数据、对齐填充 对象的定位 通过栈上的reference数据来操作堆上的具体数据。 目前主流的访问方式有使用句柄和直接指针两种。 排错 注意区分是内存泄露(Memory Leak)，还是内存溢出(Memory Overflow) 使用Eclipse Memory Analyzer进行分析，安装教程：http://www.jianshu.com/p/3b3c3a914724 堆溢出 堆空间中的每个对象都是由一个根元素为起点被层层调用的。因此，一个对象还被某一个存活的根元素所引用，就会被认为是存活对象，不能被回收，进行内存释放。因此，我们可以通过分析一个对象到根元素的引用路径来分析为什么该对象不能被顺利回收。如果说一个对象已经不被任何程序逻辑所需要但是还存在被根元素引用的情况，我们可以说这里存在内存泄露。 -Xmx20m -Xms20m 设置堆的最大最小；-Xss128k 设置虚拟机栈的大小；-Xoss设置本地方法栈大小；MaxPermSize(最大方法区容量) 虚拟机栈和本地方法栈溢出 如果线程请求的栈深度大于虚拟机所允许的最大深度，将抛出StackOverflow异常（栈溢出）；如果虚拟机在扩展栈时无法申请到足够的内存空间，则将抛出OutOfMemoryError异常（内存泄露）。 为了防止多线程导致的内存溢出，要注意控制虚拟机栈和本地方法栈的大小。 方法区和运行时常量池溢出运行时常量区是方法区的一部分。 String.intern()方法在JDK1.7之后的改变，注意“首次出现原则”。 本机直接内存溢出 DirectMemory容量可通过 -XX: MaxDirectMemorySize指定，如果不指定则默认与Java堆最大值（-Xmx指定）一样。 由DirectMemory导致的内存溢出，一个明显的特征是在Heap Dump文件中是不会看见明显的异常，如果读者返现OOM之后Dump文件很小，而程序中有直接或间接使用了NIO，那就可以考虑检查一下是不是这方面的原因。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[第1章 走进Java]]></title>
+    <url>%2F2017%2F10%2F30%2F%E7%AC%AC1%E7%AB%A0-%E8%B5%B0%E8%BF%9BJava%2F</url>
+    <content type="text"><![CDATA[java优点 摆脱平台束缚； 提供一个相对安全的内存管理和访问机制，避免了绝大部分的内存泄露和指针越界问题 实现了热点代码监测和运行时编译及优化 有一套完善的应用程序接口，还有无数来自商业机构和开源社区的第三方类库来帮助它实现各种各样的功能 java技术体系Java程序设计语言、Java虚拟机、Java API类库这三部分统称为JDK，JDK是用于支持Java程序开发的最小环境 Java类库中的Java SE API子集和Java虚拟机这两部分统称为JRE，JRE是支持Java程序运行的标准环境。]]></content>
+      <categories>
+        <category>技术</category>
+        <category>学习</category>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>虚拟机</tag>
+        <tag>JVM</tag>
+        <tag>深入理解Java虚拟机读书笔记</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[我的第一篇博客]]></title>
+    <url>%2F2017%2F10%2F30%2F%E6%88%91%E7%9A%84%E7%AC%AC%E4%B8%80%E7%AF%87%E5%8D%9A%E5%AE%A2%2F</url>
+    <content type="text"><![CDATA[首先要纪念一下，这是我第一次写博客，这也是我的第一篇博文。我希望以后几年，十几年，几十年都能够坚持写下去，与大家分享生活与工作中一切好的东西！ 我一直都想把工作和生活中的点点滴滴以博文的方式跟大家分享，但是一直都没有付诸行动（其实就是懒），直到前段时间跟同一年以应届生身份进公司的同事聊天时才知道他一直在坚持写博客，他向我推荐了他的博客，还告诉我怎么去搭建博客站点（这里要感谢github），这才完全激起了我的兴趣。当然我不希望自己只有三分钟热度，我希望自己能够一直写下去。 当然，不只是一时兴起，我打算写博客还基于几个原因： 我一直是分享的受益者，这些年通过大家的分享帮助我解决了很多问题，因此，我希望尽最大努力回馈大家； 将工作中遇到的一些坑或是解决的某些技术问题做一个总结，以备后期查阅； 记录技术与生活相关的学习笔记，展示自己的技术栈，督促自己必须不断地学习； 写一些生活感想，记录一些生活的美好瞬间； 加油吧，少年！（嘿嘿）]]></content>
+      <categories>
+        <category>生活</category>
+      </categories>
+      <tags>
+        <tag>感想</tag>
+      </tags>
+  </entry>
 </search>
