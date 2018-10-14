@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="spark-sql,调优," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。">
+<meta name="keywords" content="spark-sql,调优">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spark sql 调优">
+<meta property="og:url" content="https://wchch.github.io/2018/10/12/spark-sql-调优/index.html">
+<meta property="og:site_name" content="Alex‘s Blog">
+<meta property="og:description" content="因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-10-14T09:56:08.632Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="spark sql 调优">
+<meta name="twitter:description" content="因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://wchch.github.io/2018/10/12/spark-sql-调优/"/>
+
+
+
+
+
+  <title>spark sql 调优 | Alex‘s Blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Alex‘s Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Coding My Life</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2018/10/12/spark-sql-调优/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Alex Wong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/WEBc52e5d83c7737f8a88e0a83ab23bb22a?method=download&shareKey=a780840dbe8b7a73b1624df5108c5b18">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Alex‘s Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">spark sql 调优</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-10-12T17:53:47+08:00">
+                2018-10-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/大数据/BigData/" itemprop="url" rel="index">
+                    <span itemprop="name">BigData</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/大数据/BigData/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/大数据/BigData/Spark/Spark-Sql，调优/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark-Sql，调优</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内<br>同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时<br>也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。</p>
+<a id="more"></a>
+<h3 id="资源配置"><a href="#资源配置" class="headerlink" title="资源配置"></a>资源配置</h3><p>由于开始时资源配置不合理，导致出现了各种各样的问题，解决了这些问题之后，配置如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">#!/usr/bin/env bash</span><br><span class="line">spark-submit --deploy-mode client --master yarn \</span><br><span class="line">     --queue root.bdp_jmart_ad.jd_ad_dmp \</span><br><span class="line">     --conf spark.rdd.compress=true \</span><br><span class="line">     --conf spark.sql.shuffle.partitions=10000 \</span><br><span class="line">     --conf spark.yarn.executor.memoryOverhead=9216 \</span><br><span class="line">     --conf spark.network.timeout=1800 \</span><br><span class="line">     --conf spark.sql.broadcastTimeout=1800 \</span><br><span class="line">     --conf spark.executor.heartbeatInterval=20 \</span><br><span class="line">     --conf spark.shuffle.service.enabled=true \</span><br><span class="line">     --executor-memory 27g \</span><br><span class="line">     --executor-cores 3 \</span><br><span class="line">     --num-executors 90 \</span><br><span class="line">     --driver-memory 10g \</span><br><span class="line">     --conf spark.driver.maxResultSize=6g \</span><br><span class="line">     --driver-java-options &quot;-XX:MaxPermSize=4096m&quot; ./xxxxxxx.py</span><br></pre></td></tr></table></figure>
+<p>当key比较多时，应该适当地调大<code>--conf spark.sql.shuffle.partitions</code>的配置，否则可能导致某一个task处理的key比较多，耗时很<br>长，会出现内存溢出。但是当某些个key自己对应的数据量很大时，即使调大也没用。</p>
+<p>当出现广播变量超时或是空指针异常时，可适当调大<code>--conf spark.sql.broadcastTimeout</code>这个值。</p>
+<h3 id="spark-sql内存方法使用"><a href="#spark-sql内存方法使用" class="headerlink" title="spark sql内存方法使用"></a>spark sql内存方法使用</h3><p>当数据量比较小时，使用广播变量参与<code>join</code>,比如：<code>result_brand.join(F.broadcast(num_total_bc), [&quot;xxxx&quot;], &quot;inner&quot;)</code></p>
+<p>如果没有特别需求，<code>groupBy</code>优先于<code>Window.partitionBy</code>，<code>groupBy</code>会先局部聚合，再全局聚合。</p>
+<p>当实现<code>not in</code>查询时，如果<code>not in</code>的条件数据极小，可将其<code>colleact()</code>到driver端，使用<code>df = df_total.where(~df_total[&quot;lead&quot;].isin(leads_sample)))</code><br>和<code>df = df_total.where(df_total[&quot;lead&quot;].isin(leads_sample)))</code>实现，<code>~</code>表示取反，<code>leads_sample</code>为list。可避免使用<br><code>result_brand.join(F.broadcast(leads_sample), [&quot;xxxx&quot;], &quot;left_outer&quot;)</code>还得<code>dropDuplicates()</code>行去重导致的shuffle。</p>
+<h3 id="数据倾斜"><a href="#数据倾斜" class="headerlink" title="数据倾斜"></a>数据倾斜</h3><p>解决性能问题最主要的还是解决数据倾斜问题。目前遇到的还是<code>join</code>和<code>groupBy</code>遇到的数据倾斜问题，网上的解决方案也都一致，我也是参考网上的方案，下面结合代码说明。</p>
+<h4 id="groupBy导致的数据倾斜"><a href="#groupBy导致的数据倾斜" class="headerlink" title="groupBy导致的数据倾斜"></a>groupBy导致的数据倾斜</h4><p>可通过给key加前缀的方式进行两阶段<code>groupBy</code>。</p>
+<p>第一阶段聚合，首先给相关key添加前缀，再进行<code>groupBy</code>:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 增加前缀</span></span><br><span class="line">result = result.withColumn(<span class="string">"id"</span>, F.monotonically_increasing_id() % <span class="number">1000</span>)</span><br><span class="line">result = result.withColumn(<span class="string">"brand_id_order"</span>, F.concat_ws(<span class="string">"_"</span>, <span class="string">"id"</span>, <span class="string">"brand_id_order"</span>))</span><br><span class="line">result = result.repartition(<span class="number">10000</span>, <span class="string">"brand_id"</span>, <span class="string">"item_third_cate_id"</span>, <span class="string">"brand_id_order"</span>)</span><br><span class="line">result_brand = result.groupBy(<span class="string">"brand_id"</span>, <span class="string">"item_third_cate_id"</span>, <span class="string">"brand_id_order"</span>) \</span><br><span class="line">                      .agg(F.first(<span class="string">"brand_name_order"</span>, ignorenulls=<span class="keyword">True</span>).alias(<span class="string">"brand_name_order"</span>),</span><br><span class="line">                      F.count(<span class="string">"sale_ord_det_id"</span>).alias(<span class="string">"brand_num"</span>))</span><br></pre></td></tr></table></figure>
+<p>这里没有使用随机前缀，而是使用<code>F.monotonically_increasing_id()</code>这个固定前缀，利于对比。</p>
+<p>第二阶段聚合，去掉相关key的前缀，再进行<code>groupBy</code>:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 移除前缀</span></span><br><span class="line">result_brand = result_brand.withColumn(<span class="string">"brand_id_order"</span>, remove_prefix(<span class="string">"brand_id_order"</span>))</span><br><span class="line">result_brand = result_brand.groupBy(<span class="string">"brand_id"</span>, <span class="string">"item_third_cate_id"</span>, <span class="string">"brand_id_order"</span>) \</span><br><span class="line">                           .agg(F.first(<span class="string">"brand_name_order"</span>).alias(<span class="string">"brand_name_order"</span>),</span><br><span class="line">                           F.sum(<span class="string">"brand_num"</span>).alias(<span class="string">"brand_num"</span>))</span><br></pre></td></tr></table></figure>
+<p>移除前缀的UDF定义如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">remove_prefix = F.udf(<span class="keyword">lambda</span> col: col[col.index(<span class="string">'_'</span>) + <span class="number">1</span>:])</span><br></pre></td></tr></table></figure>
+<h4 id="join导致的数据倾斜"><a href="#join导致的数据倾斜" class="headerlink" title="join导致的数据倾斜"></a>join导致的数据倾斜</h4><p>首先对数据进行抽样，将有倾斜的key与非倾斜的key拆分，分别进行<code>join</code> ，然后再将结果进行<code>union</code>。</p>
+<p>针对倾斜部分数据，将大表的key添加上随机前缀，小表膨胀n倍，同样的一条数据膨胀后再key上加1~n的前缀进行区分。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 对数据进行采样</span></span><br><span class="line">leads_sample = key_sample_c()</span><br><span class="line"></span><br><span class="line"><span class="comment"># 去掉倾斜key</span></span><br><span class="line">df_purchase = df_purchase_total.where(~df_purchase_total[<span class="string">"lead"</span>].isin(leads_sample))</span><br><span class="line">df_cate_lead = df_cate_lead_total.where(~df_cate_lead_total[<span class="string">"lead"</span>].isin(leads_sample))</span><br><span class="line"></span><br><span class="line">result_no_skew = df_purchase.join(df_cate_lead, (df_cate_lead.lead == df_purchase.lead), <span class="string">"inner"</span>) \</span><br><span class="line">.select(<span class="string">"brand_id"</span>, <span class="string">"item_third_cate_id"</span>, <span class="string">"item_third_cate_id_order"</span>,</span><br><span class="line">        <span class="string">"item_third_cate_name_order"</span>, <span class="string">"sale_ord_det_id"</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取倾斜key</span></span><br><span class="line">df_purchase = df_purchase_total.where(df_purchase_total[<span class="string">"lead"</span>].isin(leads_sample))</span><br><span class="line">df_cate_lead = df_cate_lead_total.where(df_cate_lead_total[<span class="string">"lead"</span>].isin(leads_sample))</span><br><span class="line"></span><br><span class="line">df_purchase = df_purchase.withColumn(<span class="string">"lead"</span>, random_prefix(df_purchase[<span class="string">"lead"</span>]))</span><br><span class="line"></span><br><span class="line">df_cate_lead = df_cate_lead.withColumn(<span class="string">"lead"</span>, modifyValue(df_cate_lead[<span class="string">"lead"</span>]))</span><br><span class="line">df_cate_lead = df_cate_lead.withColumn(<span class="string">"lead"</span>, F.explode(F.split(df_cate_lead[<span class="string">"lead"</span>], <span class="string">",#"</span>)))</span><br><span class="line"></span><br><span class="line">result_skew = df_purchase.join(df_cate_lead, (df_cate_lead.lead == df_purchase.lead), <span class="string">"inner"</span>) \</span><br><span class="line">.select(<span class="string">"brand_id"</span>, <span class="string">"item_third_cate_id"</span>, <span class="string">"item_third_cate_id_order"</span>,</span><br><span class="line">        <span class="string">"item_third_cate_name_order"</span>, <span class="string">"sale_ord_det_id"</span>)</span><br><span class="line"></span><br><span class="line">result = result_no_skew.union(result_skew)</span><br></pre></td></tr></table></figure>
+<p>采样方法<code>key_sample_c()</code>代码如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">default_fraction = <span class="number">0.001</span></span><br><span class="line">real_key_threshold = <span class="number">1000000</span></span><br><span class="line">sample_key_threshold = real_key_threshold * default_fraction</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">key_sample_c</span><span class="params">()</span>:</span></span><br><span class="line">    df_purchase = df_purchase.sample(<span class="keyword">False</span>, default_fraction, seed=<span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">    result = df_purchase.join(df_cate_lead, [<span class="string">"lead"</span>], <span class="string">"inner"</span>)</span><br><span class="line"></span><br><span class="line">    result = result.groupBy(<span class="string">"lead"</span>).agg(F.count(<span class="string">"lead"</span>).alias(<span class="string">"lead_num"</span>))</span><br><span class="line">    result = result.filter(result[<span class="string">"lead_num"</span>] &gt;= sample_key_threshold).select(<span class="string">"lead"</span>)</span><br><span class="line">    result = result.collect()</span><br><span class="line"></span><br><span class="line">    leads = []</span><br><span class="line">    <span class="keyword">for</span> row <span class="keyword">in</span> result:</span><br><span class="line">        lead = row[<span class="string">"lead"</span>]</span><br><span class="line">        leads.append(lead)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> leads</span><br></pre></td></tr></table></figure>
+<p>因为<code>df_purchase</code>为大表，所以对其进行采样。采样比例为<code>default_fraction</code>，<code>sample_key_threshold</code>表示key的过滤阈值，<code>real_key_threshold</code>表示对应到真实表中实际的过滤阈值。</p>
+<p>增加随机前缀<code>random_prefix()</code>方法如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">random_prefix = F.udf(<span class="keyword">lambda</span> col: str(random.randint(<span class="number">1</span>, default_range)) + <span class="string">"_"</span> + col)</span><br></pre></td></tr></table></figure>
+<p><code>modifyValue()</code>方法代码如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">default_range = <span class="number">100</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">modify_value</span><span class="params">(value)</span>:</span></span><br><span class="line">    ret_value = <span class="string">"1_"</span> + value</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(default_range - <span class="number">1</span>):</span><br><span class="line">        ret_value = ret_value + <span class="string">",#"</span> + str(i + <span class="number">2</span>) + <span class="string">"_"</span> + value</span><br><span class="line">    <span class="keyword">return</span> ret_value</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">modifyValue = F.udf(modify_value)</span><br></pre></td></tr></table></figure>
+<h3 id="存在问题"><a href="#存在问题" class="headerlink" title="存在问题"></a>存在问题</h3><p>解决了数据倾斜的问题之后，如果资源充足的话，时间降到了1.5个小时左右，但还存在一下问题：</p>
+<ol>
+<li>经过观察发现，因为中间有dataframe复用的原因，导致每个复用都要从头开始执行，从而产生多个小job，这样的话大表就会被读取很多次，每一次读取的时间都很耗时，因为是大表又无法cache。想过使用中间表的方式减少重复读取次数，但是由于业务较为复杂，暂时没有好的方案。</li>
+<li>之所以出现1的问题是因为之前想用<code>Window.partitionBy</code>来减少job数量，但是缺出现内存溢出或是内存空间不足的问题，然后采用了链接<a href="https://issues.apache.org/jira/browse/SPARK-22517" target="_blank" rel="noopener">NullPointerException in ShuffleExternalSorter.spill()</a>中题主说的使用多个小job的方法解决。</li>
+</ol>
+<h3 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h3><ol>
+<li><a href="https://www.iteblog.com/archives/1659.html" target="_blank" rel="noopener">Spark性能优化</a></li>
+<li>(Spark性能优化指南——高级篇)[<a href="https://tech.meituan.com/spark_tuning_pro.html]" target="_blank" rel="noopener">https://tech.meituan.com/spark_tuning_pro.html]</a></li>
+<li>(Spark性能优化之道——解决Spark数据倾斜（Data Skew）的N种姿势)[<a href="http://www.jasongj.com/spark/skew/]" target="_blank" rel="noopener">http://www.jasongj.com/spark/skew/]</a></li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/spark-sql/" rel="tag"># spark-sql</a>
+          
+            <a href="/tags/调优/" rel="tag"># 调优</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/09/06/解决hive表小文件过多问题/" rel="next" title="解决hive表小文件过多问题">
+                <i class="fa fa-chevron-left"></i> 解决hive表小文件过多问题
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="https://note.youdao.com/yws/api/personal/file/WEBc52e5d83c7737f8a88e0a83ab23bb22a?method=download&shareKey=a780840dbe8b7a73b1624df5108c5b18"
+                alt="Alex Wong" />
+            
+              <p class="site-author-name" itemprop="name">Alex Wong</p>
+              <p class="site-description motion-element" itemprop="description">不管年龄大小，每个人都是我的老师</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">28</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">31</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">35</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://shalk.github.io/" title="shalk" target="_blank">shalk</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://luckylau.tech/" title="luckylau" target="_blank">luckylau</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#资源配置"><span class="nav-number">1.</span> <span class="nav-text">资源配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#spark-sql内存方法使用"><span class="nav-number">2.</span> <span class="nav-text">spark sql内存方法使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据倾斜"><span class="nav-number">3.</span> <span class="nav-text">数据倾斜</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#groupBy导致的数据倾斜"><span class="nav-number">3.1.</span> <span class="nav-text">groupBy导致的数据倾斜</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#join导致的数据倾斜"><span class="nav-number">3.2.</span> <span class="nav-text">join导致的数据倾斜</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#存在问题"><span class="nav-number">4.</span> <span class="nav-text">存在问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考链接"><span class="nav-number">5.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Alex Wong</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

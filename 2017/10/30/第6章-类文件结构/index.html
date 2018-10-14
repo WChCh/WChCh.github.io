@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Java虚拟机,JVM,深入理解Java虚拟机,读书笔记," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="无关性的基石各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。无关性：  平台无关性 语言无关性实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。  Class类文件的结构 任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来">
+<meta name="keywords" content="Java虚拟机,JVM,深入理解Java虚拟机,读书笔记">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第6章 类文件结构">
+<meta property="og:url" content="https://wchch.github.io/2017/10/30/第6章-类文件结构/index.html">
+<meta property="og:site_name" content="Alex‘s Blog">
+<meta property="og:description" content="无关性的基石各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。无关性：  平台无关性 语言无关性实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。  Class类文件的结构 任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-10-14T09:35:10.956Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="第6章 类文件结构">
+<meta name="twitter:description" content="无关性的基石各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。无关性：  平台无关性 语言无关性实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。  Class类文件的结构 任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://wchch.github.io/2017/10/30/第6章-类文件结构/"/>
+
+
+
+
+
+  <title>第6章 类文件结构 | Alex‘s Blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Alex‘s Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Coding My Life</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2017/10/30/第6章-类文件结构/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Alex Wong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/WEBc52e5d83c7737f8a88e0a83ab23bb22a?method=download&shareKey=a780840dbe8b7a73b1624df5108c5b18">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Alex‘s Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">第6章 类文件结构</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-10-30T16:41:00+08:00">
+                2017-10-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/技术/" itemprop="url" rel="index">
+                    <span itemprop="name">技术</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/技术/学习/" itemprop="url" rel="index">
+                    <span itemprop="name">学习</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/技术/学习/JVM/" itemprop="url" rel="index">
+                    <span itemprop="name">JVM</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h4 id="无关性的基石"><a href="#无关性的基石" class="headerlink" title="无关性的基石"></a>无关性的基石</h4><p>各种不同平台的虚拟机与所有平台都统一使用的程序存储格式—字节码(ByteCode)是构成平台无关性的基石。<br>无关性：</p>
+<ol>
+<li>平台无关性</li>
+<li>语言无关性<br>实现语言无关性的基础仍然是虚拟机和字节码存储格式。Java虚拟机不和包括Java在内的任何语言绑定，它只与“Class”这种特定的二进制文件格式所关联。</li>
+</ol>
+<h4 id="Class类文件的结构"><a href="#Class类文件的结构" class="headerlink" title="Class类文件的结构"></a>Class类文件的结构</h4><ol>
+<li>任何一个Class文件都对应着唯一一个类或是接口的定义信息，但反过来说，类或接口并不一定都得定义在文件里。</li>
+<li>Class文件是一组以8位字节为基础单位的二进制流，各个数据项目严格按照顺序紧凑第排列在Class文件中，中间没有任何分隔符。当遇到需要占用8位字节以上空间的数据项时，则会按照高位在前的方式分割成若干个8位字节进行存储（大端模式）。</li>
+<li>Class文件格式采用一种类似于C语言结构体的伪结构来存储数据，这种结构中只有两种数据类型：无符号数和表。</li>
+<li>无符号数可以用来描述数字、索引引用、数量值或者按照UTF-8编码构成字符串。</li>
+<li>表是由多个无符号数或者其他表作为数据项构成的复合数据类型，所有表都习惯性地以“_info”结尾。整个Class文件本质上就是一张表。</li>
+</ol>
+<a id="more"></a>
+<h5 id="魔数与Class文件的版本"><a href="#魔数与Class文件的版本" class="headerlink" title="魔数与Class文件的版本"></a>魔数与Class文件的版本</h5><ol>
+<li>每个Class文件的头4个字节称为魔数，唯一作用是确定这个文件是否为一个能被虚拟机接受的Class文件，使用魔数不是扩展名来进行识别主要是基于安全方面的考虑，值为：0xCAFEBABE。</li>
+<li>紧接着魔数的4个字节存储的是Class文件的版本号：第5和第6个字节是次版本号，第7和第8个字节是主版本号。</li>
+</ol>
+<h5 id="常量池"><a href="#常量池" class="headerlink" title="常量池"></a>常量池</h5><p>紧接着主次版本号之后的是常量池入口，常量池可以理解为Class文件中的资源仓库，它是Class文件结构中与其他项目关联最多的数据类型，也是占用Class文件空间最大的数据项目之一，同时他还是在Class文件中第一个出现的表类型数据项目。</p>
+<p>常量池容量计数器是从1开始计数的，表示常量的个数。<br>常量翅中主要存放两大类常量：</p>
+<ol>
+<li>字面量</li>
+<li>符号引用</li>
+</ol>
+<p>字面量比较接近于Java语言层面的常量概念，如字符串、声明为final的常量值等。而符号引用则属于编译原理方面的概念，包括了下面的三类常量：</p>
+<ol>
+<li>类和接口的全限定名</li>
+<li>字段的名称和描述符</li>
+<li>方法的名称和描述符<br>常量池中每一个常量都是一个表。</li>
+<li>常量池容量为21，表示有21项常量</li>
+</ol>
+<p><strong>由于Class文件中方法、字段等都需要引用CONSTANT_Utf8_info型常量来描述名称，所以CONSTANT_Utf8_info型常量的最大长度也就是Java中方法、字段名的最大长度。而这里的最大长度就是length的最大值，既u2类型能表达的最大值65535.所以Java程序中如果定义了超过65KB因为字符串的变量或方法名将会无法编译。</strong></p>
+<p>javap工具用于分析Class文件字节码的。</p>
+<h5 id="访问标志"><a href="#访问标志" class="headerlink" title="访问标志"></a>访问标志</h5><p>这个标志用于识别一些类或者是接口层次的访问信息。</p>
+<h5 id="类索引、父类索引与接口索引集合"><a href="#类索引、父类索引与接口索引集合" class="headerlink" title="类索引、父类索引与接口索引集合"></a>类索引、父类索引与接口索引集合</h5><p>Class文件中由这三项数据来确定这个类的继承关系。</p>
+<h5 id="字段表集合"><a href="#字段表集合" class="headerlink" title="字段表集合"></a>字段表集合</h5><p>字段表用于描述接口库或者类中声明的变量。</p>
+<p>字段包括类级变量以及实例级变量，但不包括在方法内部声明的局部变量。</p>
+<p>字段表集合中不会列出从超类或者父类接口中继承而来的字段，但有可能列出原本Java代码中不存在的字段。对于字节码来说，如果两个字段的描述符不一致，那字段重名就是合法的。</p>
+<h5 id="方发表集合"><a href="#方发表集合" class="headerlink" title="方发表集合"></a>方发表集合</h5><p>volatile关键字和transient关键字不能修饰方法，所以方发表的访问标志中没有了ACC_VOLATITE标志和ACC_TRANSIENT标志。</p>
+<h5 id="属性表集合"><a href="#属性表集合" class="headerlink" title="属性表集合"></a>属性表集合</h5><p>在Class文件、字段表、方发表都可以携带自己的属性表集合，以用于描述某些场景专有的信息。<br>操作栈数？<br>max_stack代表了操作数栈深度的最大值。在方法执行的任意时刻，操作栈数都不会超过这个深度。虚拟机运行的时候需要根据这个值来分配栈帧中的操作栈深度。</p>
+<h6 id="1-Code属性"><a href="#1-Code属性" class="headerlink" title="1 Code属性"></a>1 Code属性</h6><p>了解Code属性是学习后面关于字节码执行引擎内容的必要基础，能直接阅读字节码也是工作中分析Java代码语义问题的必要工具和基本技能。</p>
+<p>使用Javap 命令计算字节码指令： javap -verbose TestClass</p>
+<p>在实例方法的局部变量表中至少会存在一个指向当前对象实例的局部变量，局部变量表中也会预留第一个Slot位来存放对象实例的引用，方法参数值从1开始计算。，这个处理只对实例方法有效。</p>
+<h6 id="2-Exceptions属性"><a href="#2-Exceptions属性" class="headerlink" title="2 Exceptions属性"></a>2 Exceptions属性</h6><p>Exceptions属性的作用是列举出方法中可能抛出的受检查异常(Checked Exceptions)，也就是方法描述时在throws关键字后面列举的异常。</p>
+<h6 id="3-LineNumberTable属性"><a href="#3-LineNumberTable属性" class="headerlink" title="3 LineNumberTable属性"></a>3 LineNumberTable属性</h6><p>LineNumberTable属性用于描述Java源码行号与字节码行号之间的对应关系。</p>
+<h6 id="4-LocalVariableTable属性"><a href="#4-LocalVariableTable属性" class="headerlink" title="4 LocalVariableTable属性"></a>4 LocalVariableTable属性</h6><p>LocalVariableTable属性用于描述栈帧中局部变量表中的变量与Java源码中定义的变量之间的关系</p>
+<h6 id="5-SourceFile属性"><a href="#5-SourceFile属性" class="headerlink" title="5 SourceFile属性"></a>5 SourceFile属性</h6><p>SourceFile属性用于记录生成这个Class文件的源码文件名称。</p>
+<h6 id="6-ConstantValue属性"><a href="#6-ConstantValue属性" class="headerlink" title="6 ConstantValue属性"></a>6 ConstantValue属性</h6><p>ConstantValue属性的作用是通知虚拟机自动为静态变量赋值。onstantValue的属性值只能限于基本类型和String。</p>
+<h6 id="7-InnerClasses属性"><a href="#7-InnerClasses属性" class="headerlink" title="7 InnerClasses属性"></a>7 InnerClasses属性</h6><p>InnerClasses属性用于记录内部类与宿主类之间的关联。</p>
+<h6 id="8-Deprecated及Synthetic属性"><a href="#8-Deprecated及Synthetic属性" class="headerlink" title="8 Deprecated及Synthetic属性"></a>8 Deprecated及Synthetic属性</h6><h6 id="9-StackMapTable属性"><a href="#9-StackMapTable属性" class="headerlink" title="9 StackMapTable属性"></a>9 StackMapTable属性</h6><h6 id="10-Signature"><a href="#10-Signature" class="headerlink" title="10 Signature"></a>10 Signature</h6><h6 id="11-BootstrapMethods属性"><a href="#11-BootstrapMethods属性" class="headerlink" title="11 BootstrapMethods属性"></a>11 BootstrapMethods属性</h6><h5 id="字节码指令简介"><a href="#字节码指令简介" class="headerlink" title="字节码指令简介"></a>字节码指令简介</h5><p>Java虚拟机的指令由一个字节长度、代表着某种特定操作含义的数字（称为操作码，Opcode）以及跟随其后的零至多个代表此操作所需参数（称为操作数，Operands）而构成。</p>
+<h6 id="1-字节码与数据结构"><a href="#1-字节码与数据结构" class="headerlink" title="1 字节码与数据结构"></a>1 字节码与数据结构</h6><p>阅读字节码作为了解Java虚拟机的基础技能，是一项应当熟练掌握的能力。</p>
+<h6 id="2-加载和存储指令"><a href="#2-加载和存储指令" class="headerlink" title="2 加载和存储指令"></a>2 加载和存储指令</h6><p>加载和存储指令用于将数据在栈帧中的局部变量表和操作数栈之间来回传输。</p>
+<h6 id="3-运算指令"><a href="#3-运算指令" class="headerlink" title="3 运算指令"></a>3 运算指令</h6><p>运算指令用于对两个操作数栈上的值进行某种特定运算，并把结果重新存入到操作栈顶。</p>
+<p>算术指令分为两种：</p>
+<ol>
+<li>对整型数据进行运算的指令。</li>
+<li>对浮点型数据进行运算的指令。</li>
+</ol>
+<p>无论哪种算术指令，都使用Java虚拟机的数据类型，由于没有直接支持byte，short，char和boolean类型的算术指令，对于这类数据的运算，应使用操作int类型的指令代替。</p>
+<h6 id="4-类型转换指令"><a href="#4-类型转换指令" class="headerlink" title="4 类型转换指令"></a>4 类型转换指令</h6><h6 id="5-对象创建与访问指令"><a href="#5-对象创建与访问指令" class="headerlink" title="5 对象创建与访问指令"></a>5 对象创建与访问指令</h6><h6 id="6-操作数栈管理指令"><a href="#6-操作数栈管理指令" class="headerlink" title="6 操作数栈管理指令"></a>6 操作数栈管理指令</h6><p>操作数栈的指令：</p>
+<ol>
+<li>将操作数栈的栈顶一个或两个元素出栈：pop、pop2。</li>
+<li>复制栈顶一个或两个数值并将复制值或双份的复制值重新压入栈顶：dup、dup2、dup_x1、dup_x2、dup2_x2。</li>
+<li>将栈最顶端的两个数值互换：swap。</li>
+</ol>
+<h6 id="7-控制转移指令"><a href="#7-控制转移指令" class="headerlink" title="7 控制转移指令"></a>7 控制转移指令</h6><h6 id="8-方法调用和返回指令"><a href="#8-方法调用和返回指令" class="headerlink" title="8 方法调用和返回指令"></a>8 方法调用和返回指令</h6><h6 id="9-异常处理指令"><a href="#9-异常处理指令" class="headerlink" title="9 异常处理指令"></a>9 异常处理指令</h6><h6 id="10-同步指令"><a href="#10-同步指令" class="headerlink" title="10 同步指令"></a>10 同步指令</h6><h5 id="共有设计和私有设计"><a href="#共有设计和私有设计" class="headerlink" title="共有设计和私有设计"></a>共有设计和私有设计</h5>
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Java虚拟机/" rel="tag"># Java虚拟机</a>
+          
+            <a href="/tags/JVM/" rel="tag"># JVM</a>
+          
+            <a href="/tags/深入理解Java虚拟机/" rel="tag"># 深入理解Java虚拟机</a>
+          
+            <a href="/tags/读书笔记/" rel="tag"># 读书笔记</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/10/30/第5章-调优案例分析与实战/" rel="next" title="第5章 调优案例分析与实战">
+                <i class="fa fa-chevron-left"></i> 第5章 调优案例分析与实战
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/30/第7章-虚拟机类加载机制/" rel="prev" title="第7章 虚拟机类加载机制">
+                第7章 虚拟机类加载机制 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="https://note.youdao.com/yws/api/personal/file/WEBc52e5d83c7737f8a88e0a83ab23bb22a?method=download&shareKey=a780840dbe8b7a73b1624df5108c5b18"
+                alt="Alex Wong" />
+            
+              <p class="site-author-name" itemprop="name">Alex Wong</p>
+              <p class="site-description motion-element" itemprop="description">不管年龄大小，每个人都是我的老师</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">28</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">31</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">35</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://shalk.github.io/" title="shalk" target="_blank">shalk</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://luckylau.tech/" title="luckylau" target="_blank">luckylau</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#无关性的基石"><span class="nav-number">1.</span> <span class="nav-text">无关性的基石</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Class类文件的结构"><span class="nav-number">2.</span> <span class="nav-text">Class类文件的结构</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#魔数与Class文件的版本"><span class="nav-number">2.1.</span> <span class="nav-text">魔数与Class文件的版本</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#常量池"><span class="nav-number">2.2.</span> <span class="nav-text">常量池</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#访问标志"><span class="nav-number">2.3.</span> <span class="nav-text">访问标志</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#类索引、父类索引与接口索引集合"><span class="nav-number">2.4.</span> <span class="nav-text">类索引、父类索引与接口索引集合</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#字段表集合"><span class="nav-number">2.5.</span> <span class="nav-text">字段表集合</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#方发表集合"><span class="nav-number">2.6.</span> <span class="nav-text">方发表集合</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#属性表集合"><span class="nav-number">2.7.</span> <span class="nav-text">属性表集合</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#1-Code属性"><span class="nav-number">2.7.1.</span> <span class="nav-text">1 Code属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#2-Exceptions属性"><span class="nav-number">2.7.2.</span> <span class="nav-text">2 Exceptions属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-LineNumberTable属性"><span class="nav-number">2.7.3.</span> <span class="nav-text">3 LineNumberTable属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#4-LocalVariableTable属性"><span class="nav-number">2.7.4.</span> <span class="nav-text">4 LocalVariableTable属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#5-SourceFile属性"><span class="nav-number">2.7.5.</span> <span class="nav-text">5 SourceFile属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#6-ConstantValue属性"><span class="nav-number">2.7.6.</span> <span class="nav-text">6 ConstantValue属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#7-InnerClasses属性"><span class="nav-number">2.7.7.</span> <span class="nav-text">7 InnerClasses属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#8-Deprecated及Synthetic属性"><span class="nav-number">2.7.8.</span> <span class="nav-text">8 Deprecated及Synthetic属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#9-StackMapTable属性"><span class="nav-number">2.7.9.</span> <span class="nav-text">9 StackMapTable属性</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#10-Signature"><span class="nav-number">2.7.10.</span> <span class="nav-text">10 Signature</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#11-BootstrapMethods属性"><span class="nav-number">2.7.11.</span> <span class="nav-text">11 BootstrapMethods属性</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#字节码指令简介"><span class="nav-number">2.8.</span> <span class="nav-text">字节码指令简介</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#1-字节码与数据结构"><span class="nav-number">2.8.1.</span> <span class="nav-text">1 字节码与数据结构</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#2-加载和存储指令"><span class="nav-number">2.8.2.</span> <span class="nav-text">2 加载和存储指令</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-运算指令"><span class="nav-number">2.8.3.</span> <span class="nav-text">3 运算指令</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#4-类型转换指令"><span class="nav-number">2.8.4.</span> <span class="nav-text">4 类型转换指令</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#5-对象创建与访问指令"><span class="nav-number">2.8.5.</span> <span class="nav-text">5 对象创建与访问指令</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#6-操作数栈管理指令"><span class="nav-number">2.8.6.</span> <span class="nav-text">6 操作数栈管理指令</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#7-控制转移指令"><span class="nav-number">2.8.7.</span> <span class="nav-text">7 控制转移指令</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#8-方法调用和返回指令"><span class="nav-number">2.8.8.</span> <span class="nav-text">8 方法调用和返回指令</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#9-异常处理指令"><span class="nav-number">2.8.9.</span> <span class="nav-text">9 异常处理指令</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#10-同步指令"><span class="nav-number">2.8.10.</span> <span class="nav-text">10 同步指令</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#共有设计和私有设计"><span class="nav-number">2.9.</span> <span class="nav-text">共有设计和私有设计</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Alex Wong</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
