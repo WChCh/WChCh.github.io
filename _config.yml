@@ -10,7 +10,7 @@ keywords:
 author: Alex Wong
 language: zh-Hans
 timezone: Asia/Shanghai
-avatar: https://note.youdao.com/yws/api/personal/file/WEBc52e5d83c7737f8a88e0a83ab23bb22a?method=download&shareKey=a780840dbe8b7a73b1624df5108c5b18
+avatar: /images/user_defined/logo.jpg
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
