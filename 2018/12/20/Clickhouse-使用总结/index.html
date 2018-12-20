@@ -79,18 +79,18 @@
 
 
 
-<meta name="description" content="Clickhouse 使用总结配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。 客户端clickhouse提供连接的客户端有好几种，有命令行客户端，JDBC驱动的客户端和H">
+<meta name="description" content="Clickhouse 使用总结以下是本人短时间内的clickhouse调研使用总结，很多坑还没踩过，所以只是一些浅显的介绍。 配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述">
 <meta name="keywords" content="clickhosue,olap,MPP">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Clickhouse 使用总结">
 <meta property="og:url" content="https://wchch.github.io/2018/12/20/Clickhouse-使用总结/index.html">
 <meta property="og:site_name" content="Alex‘s Blog">
-<meta property="og:description" content="Clickhouse 使用总结配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。 客户端clickhouse提供连接的客户端有好几种，有命令行客户端，JDBC驱动的客户端和H">
+<meta property="og:description" content="Clickhouse 使用总结以下是本人短时间内的clickhouse调研使用总结，很多坑还没踩过，所以只是一些浅显的介绍。 配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-12-20T04:04:08.600Z">
+<meta property="og:updated_time" content="2018-12-20T04:11:00.715Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Clickhouse 使用总结">
-<meta name="twitter:description" content="Clickhouse 使用总结配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。 客户端clickhouse提供连接的客户端有好几种，有命令行客户端，JDBC驱动的客户端和H">
+<meta name="twitter:description" content="Clickhouse 使用总结以下是本人短时间内的clickhouse调研使用总结，很多坑还没踩过，所以只是一些浅显的介绍。 配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述">
 
 
 
@@ -385,7 +385,8 @@
       
 
       
-        <h3 id="Clickhouse-使用总结"><a href="#Clickhouse-使用总结" class="headerlink" title="Clickhouse 使用总结"></a>Clickhouse 使用总结</h3><h4 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h4><p>clickhouse的配置文件包括<code>/etc/clickhouse-server/</code>下的<code>config.xml</code>，<code>users.xml</code>以及<code>/etc/</code>下的集群配置文件<code>metrika.xml</code>。通过<code>metrika.xml</code>可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。</p>
+        <h3 id="Clickhouse-使用总结"><a href="#Clickhouse-使用总结" class="headerlink" title="Clickhouse 使用总结"></a>Clickhouse 使用总结</h3><p>以下是本人短时间内的clickhouse调研使用总结，很多坑还没踩过，所以只是一些浅显的介绍。</p>
+<h4 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h4><p>clickhouse的配置文件包括<code>/etc/clickhouse-server/</code>下的<code>config.xml</code>，<code>users.xml</code>以及<code>/etc/</code>下的集群配置文件<code>metrika.xml</code>。通过<code>metrika.xml</code>可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。</p>
 <h4 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h4><p>clickhouse提供连接的客户端有好几种，有命令行客户端，JDBC驱动的客户端和HTTP客户端等，这里主要将如何在spring boot中封装HTTP客户端和基于JDBC驱动集成Mybatis。</p>
 <h5 id="JDBC"><a href="#JDBC" class="headerlink" title="JDBC"></a>JDBC</h5><p>JDBC驱动使用官方提供的，走8123端口，使用http协议。官方驱动连接地址为：<a href="https://github.com/yandex/clickhouse-jdbc" target="_blank" rel="noopener">https://github.com/yandex/clickhouse-jdbc</a></p>
 <a id="more"></a>
