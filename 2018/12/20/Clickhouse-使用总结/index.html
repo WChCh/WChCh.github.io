@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="clickhosue,olap,MPP," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Clickhouse 使用总结配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。 客户端clickhouse提供连接的客户端有好几种，有命令行客户端，JDBC驱动的客户端和H">
+<meta name="keywords" content="clickhosue,olap,MPP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Clickhouse 使用总结">
+<meta property="og:url" content="https://wchch.github.io/2018/12/20/Clickhouse-使用总结/index.html">
+<meta property="og:site_name" content="Alex‘s Blog">
+<meta property="og:description" content="Clickhouse 使用总结配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。 客户端clickhouse提供连接的客户端有好几种，有命令行客户端，JDBC驱动的客户端和H">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-12-20T04:04:08.600Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Clickhouse 使用总结">
+<meta name="twitter:description" content="Clickhouse 使用总结配置文件clickhouse的配置文件包括/etc/clickhouse-server/下的config.xml，users.xml以及/etc/下的集群配置文件metrika.xml。通过metrika.xml可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。 客户端clickhouse提供连接的客户端有好几种，有命令行客户端，JDBC驱动的客户端和H">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://wchch.github.io/2018/12/20/Clickhouse-使用总结/"/>
+
+
+
+
+
+  <title>Clickhouse 使用总结 | Alex‘s Blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Alex‘s Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Coding My Life</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2018/12/20/Clickhouse-使用总结/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Alex Wong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/user_defined/logo.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Alex‘s Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Clickhouse 使用总结</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-12-20T11:58:50+08:00">
+                2018-12-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/" itemprop="url" rel="index">
+                    <span itemprop="name">olap</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/" itemprop="url" rel="index">
+                    <span itemprop="name">BigData</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/clickhouse/" itemprop="url" rel="index">
+                    <span itemprop="name">clickhouse</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/clickhouse/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="Clickhouse-使用总结"><a href="#Clickhouse-使用总结" class="headerlink" title="Clickhouse 使用总结"></a>Clickhouse 使用总结</h3><h4 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h4><p>clickhouse的配置文件包括<code>/etc/clickhouse-server/</code>下的<code>config.xml</code>，<code>users.xml</code>以及<code>/etc/</code>下的集群配置文件<code>metrika.xml</code>。通过<code>metrika.xml</code>可以看到节点登陆的明文用户名，密码。关于配置文件的说明不再赘述。</p>
+<h4 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h4><p>clickhouse提供连接的客户端有好几种，有命令行客户端，JDBC驱动的客户端和HTTP客户端等，这里主要将如何在spring boot中封装HTTP客户端和基于JDBC驱动集成Mybatis。</p>
+<h5 id="JDBC"><a href="#JDBC" class="headerlink" title="JDBC"></a>JDBC</h5><p>JDBC驱动使用官方提供的，走8123端口，使用http协议。官方驱动连接地址为：<a href="https://github.com/yandex/clickhouse-jdbc" target="_blank" rel="noopener">https://github.com/yandex/clickhouse-jdbc</a></p>
+<a id="more"></a>
+<p>首先<code>POM</code>文件中加入依赖：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">	&lt;groupId&gt;org.mybatis.spring.boot&lt;/groupId&gt;</span><br><span class="line">	&lt;artifactId&gt;mybatis-spring-boot-starter&lt;/artifactId&gt;</span><br><span class="line">	&lt;version&gt;1.1.1&lt;/version&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br><span class="line">&lt;dependency&gt;</span><br><span class="line">    &lt;groupId&gt;ru.yandex.clickhouse&lt;/groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;clickhouse-jdbc&lt;/artifactId&gt;</span><br><span class="line">    &lt;version&gt;0.1.43&lt;/version&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br></pre></td></tr></table></figure>
+<p>然后基于注解编写Mybatis的Mapper接口：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Mapper</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">UserMapper</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Select</span>(<span class="string">"SELECT * FROM user WHERE name = #&#123;name&#125; FORMAT TabSeparatedWithNamesAndTypes"</span>)</span><br><span class="line">    <span class="function">User <span class="title">findByName</span><span class="params">(@Param(<span class="string">"name"</span>)</span> String name)</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Insert</span>(<span class="string">"INSERT INTO user(id, name, age,date) VALUES(#&#123;id&#125;, #&#123;name&#125;, #&#123;age&#125;, #&#123;date&#125;)"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">int</span> <span class="title">insert</span><span class="params">(@Param(<span class="string">"id"</span>)</span> Long id, @<span class="title">Param</span><span class="params">(<span class="string">"name"</span>)</span> String name, @<span class="title">Param</span><span class="params">(<span class="string">"age"</span>)</span> Integer age, @<span class="title">Param</span><span class="params">(<span class="string">"date"</span>)</span> String date)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>注意</strong>：官方提供的JDBC驱动提供的查询<code>FORMAR</code>方式只支持<code>TabSeparatedWithNamesAndTypes</code>方式，经测试，在版本<code>0.1.43</code>中当查询语句有<code>where</code> 等条件时要加上<code>FORMAT TabSeparatedWithNamesAndTypes</code>。</p>
+<p>配置文件<code>application.properties</code>的配置如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># clickhouse</span><br><span class="line">spring.datasource.url=jdbc:clickhouse:<span class="comment">//localhost:8123/default</span></span><br><span class="line">spring.datasource.driver-<span class="class"><span class="keyword">class</span>-<span class="title">name</span></span>=ru.yandex.clickhouse.ClickHouseDriver</span><br><span class="line">spring.datasource.username=root</span><br><span class="line">spring.datasource.password=<span class="number">123456</span></span><br></pre></td></tr></table></figure>
+<h5 id="HTTTP"><a href="#HTTTP" class="headerlink" title="HTTTP"></a>HTTTP</h5><p>HTTP客户端同样是走8123端口，网上有开源的基于Java 8封装的客户端，但是由于公司环境还只是Java 7，所以我基于<code>httpclient</code>自己封装了一个。</p>
+<p>首先添加依赖：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">	&lt;groupId&gt;org.apache.httpcomponents&lt;/groupId&gt;</span><br><span class="line">	&lt;artifactId&gt;httpcore&lt;/artifactId&gt;</span><br><span class="line">	&lt;version&gt;4.4.10&lt;/version&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br><span class="line"></span><br><span class="line">&lt;dependency&gt;</span><br><span class="line">	&lt;groupId&gt;org.apache.httpcomponents&lt;/groupId&gt;</span><br><span class="line">	&lt;artifactId&gt;httpclient&lt;/artifactId&gt;</span><br><span class="line">	&lt;version&gt;4.5.6&lt;/version&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br><span class="line"></span><br><span class="line">&lt;dependency&gt;</span><br><span class="line">	&lt;groupId&gt;com.alibaba&lt;/groupId&gt;</span><br><span class="line">	&lt;artifactId&gt;fastjson&lt;/artifactId&gt;</span><br><span class="line">	&lt;version&gt;1.2.15  &lt;/version&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br></pre></td></tr></table></figure>
+<p>这里引入Json依赖主要是用于接收Json格式的数据。</p>
+<p>然后创建<code>clickhouseHttpClient</code>类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"><span class="keyword">import</span> java.net.URISyntaxException;</span><br><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.JSONObject;</span><br><span class="line"><span class="keyword">import</span> org.apache.commons.codec.binary.Base64;</span><br><span class="line"><span class="keyword">import</span> org.apache.http.HttpEntity;</span><br><span class="line"><span class="keyword">import</span> org.apache.http.HttpResponse;</span><br><span class="line"><span class="keyword">import</span> org.apache.http.client.HttpClient;</span><br><span class="line"><span class="keyword">import</span> org.apache.http.client.methods.HttpGet;</span><br><span class="line"><span class="keyword">import</span> org.apache.http.client.utils.URIBuilder;</span><br><span class="line"><span class="keyword">import</span> org.apache.http.impl.client.HttpClientBuilder;</span><br><span class="line"><span class="keyword">import</span> org.apache.http.util.EntityUtils;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.Logger;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClickHouseClient</span> <span class="keyword">implements</span> <span class="title">AutoCloseable</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOG = LoggerFactory.getLogger(ClickHouseClient.class);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String SELECT_FORMAT = <span class="string">"JSON"</span>;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String INSERT_FORMAT = <span class="string">"TabSeparated"</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> String endpoint;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> HttpClient httpClient;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> HttpGet httpGet;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> URIBuilder builder;</span><br><span class="line">	<span class="keyword">private</span> HttpEntity httpEntity;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">ClickHouseClient</span><span class="params">(String endpoint, String username, String password)</span> <span class="keyword">throws</span> URISyntaxException</span>&#123;</span><br><span class="line">		<span class="keyword">this</span>.endpoint = endpoint;</span><br><span class="line">		<span class="keyword">this</span>.builder = <span class="keyword">new</span> URIBuilder(endpoint);</span><br><span class="line">		<span class="keyword">this</span>.httpGet = <span class="keyword">new</span> HttpGet();</span><br><span class="line">		String encoding = Base64.encodeBase64String((username + <span class="string">":"</span> + password).getBytes());</span><br><span class="line">		<span class="keyword">this</span>.httpGet.setHeader(<span class="string">"Content-type"</span>, <span class="string">"application/json"</span>);</span><br><span class="line">		<span class="keyword">this</span>.httpGet.setHeader(<span class="string">"charset"</span>, <span class="string">"UTF-8"</span>);</span><br><span class="line">		<span class="keyword">this</span>.httpGet.setHeader(<span class="string">"Authorization"</span>, <span class="string">"Basic "</span> + encoding);</span><br><span class="line">		<span class="keyword">this</span>.httpClient = HttpClientBuilder.create().build();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">		    <span class="keyword">if</span>(<span class="keyword">null</span> != <span class="keyword">this</span>.httpEntity)&#123;</span><br><span class="line">                EntityUtils.consume(<span class="keyword">this</span>.httpEntity);</span><br><span class="line">            &#125;</span><br><span class="line">		&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">			LOG.error(<span class="string">"Error closing http client"</span>, e);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> JSONObject <span class="title">get</span><span class="params">(String query)</span> <span class="keyword">throws</span> URISyntaxException, IOException </span>&#123;</span><br><span class="line">		String queryWithFormat = query + <span class="string">" FORMAT "</span> + SELECT_FORMAT;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">this</span>.builder.setParameter(<span class="string">"query"</span>, queryWithFormat);</span><br><span class="line">		<span class="keyword">this</span>.httpGet.setURI(<span class="keyword">this</span>.builder.build());</span><br><span class="line">		</span><br><span class="line">		LOG.debug(<span class="string">"querying GET &#123;&#125;"</span>, queryWithFormat);</span><br><span class="line"></span><br><span class="line">		HttpResponse response = <span class="keyword">this</span>.httpClient.execute(httpGet);</span><br><span class="line">		<span class="keyword">this</span>.httpEntity = response.getEntity();</span><br><span class="line">		JSONObject json = JSONObject.parseObject(EntityUtils.toString(<span class="keyword">this</span>.httpEntity));</span><br><span class="line">		System.out.println(json);</span><br><span class="line">		<span class="keyword">return</span> json;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用HTTP客户端的好处是，当查询语句中进行<code>group by</code>后，紧跟着<code>WITH TOTALS</code>，并且是<code>FORMAT JSON</code>时能够返回总数，这使得可以计算百分比。</p>
+<h4 id="建表"><a href="#建表" class="headerlink" title="建表"></a>建表</h4><p>目前的集群环境中只做了三个分片没有做副本，所以我使用的是<code>MergeTree</code>引擎。建表过程包括建本地表和分布式表。</p>
+<h5 id="本地表"><a href="#本地表" class="headerlink" title="本地表"></a>本地表</h5><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> table_test_local</span><br><span class="line">(</span><br><span class="line">    brand_id <span class="keyword">String</span>, </span><br><span class="line">    user_log_acct <span class="keyword">String</span>, </span><br><span class="line">    <span class="keyword">status</span> <span class="keyword">String</span>, </span><br><span class="line">    dt <span class="keyword">String</span></span><br><span class="line">)</span><br><span class="line"><span class="keyword">ENGINE</span> = MergeTree</span><br><span class="line"><span class="keyword">PARTITION</span> <span class="keyword">BY</span> (dt, <span class="keyword">status</span>)</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> (brand_id)</span><br></pre></td></tr></table></figure>
+<p><code>PARTITION BY</code>表示创建分区，<code>ORDER BY (brand_id)</code>表示索引，可以创建联合索引，并且遵守左生效原则，我这里没有指定索引粒度，使用的默认值。</p>
+<h5 id="分布式表"><a href="#分布式表" class="headerlink" title="分布式表"></a>分布式表</h5><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> table_test</span><br><span class="line">(</span><br><span class="line">    brand_id <span class="keyword">String</span>,</span><br><span class="line">    <span class="keyword">user</span> <span class="keyword">String</span>,</span><br><span class="line">    <span class="keyword">status</span> <span class="keyword">String</span>, </span><br><span class="line">    dt <span class="keyword">String</span></span><br><span class="line">)<span class="keyword">ENGINE</span> = <span class="keyword">Distributed</span>(jdos_clickhouse_cluster, insight, <span class="string">'table_test_local'</span>, <span class="keyword">rand</span>());</span><br></pre></td></tr></table></figure>
+<p><code>jdos_clickhouse_cluster</code>表示某一个集群，可在配置文件中找到，<code>insight</code>表示某一个库，<code>table_test_local</code>表示关联的本地表，rand()表示如何将数据分发到某一个分片上，这里采用随机的方式。</p>
+<p><em>注意</em>：导入输入时clickhouse默认将null转为了长度为零的空字符串。</p>
+<h4 id="SQL与优化"><a href="#SQL与优化" class="headerlink" title="SQL与优化"></a>SQL与优化</h4><p>clickhouse提供了很好的SQL查询支持，很容易上手，下面主要介绍我用到的一些高阶SQL以及优化方法。</p>
+<h5 id="高阶SQL"><a href="#高阶SQL" class="headerlink" title="高阶SQL"></a>高阶SQL</h5><p><code>select if(empty(dim_jxkh_level), &#39;-1&#39;, dim_jxkh_level) as name</code>表示<code>dim_jxkh_level</code>为空时返回<code>-1</code></p>
+<p><code>select arrayJoin(arrayFilter(element -&gt; notEmpty(element), splitByString(&#39;#&#39;,cfv_cate_30dcate3))) as name</code>:</p>
+<ol>
+<li><code>splitByString(&#39;#&#39;,cfv_cate_30dcate3)</code>表示字符串按住奥<code>#</code>切分，并且返回数组。</li>
+<li><code>arrayFilter(element -&gt; notEmpty(element), splitByString(&#39;#&#39;,cfv_cate_30dcate3))</code>通过lamda表达式<code>element -&gt; notEmpty(element)</code>过滤掉数组<code>splitByString(&#39;#&#39;,cfv_cate_30dcate3)</code>中为空的字符。</li>
+<li><code>arrayJoin()</code>表示按照某一列中的数组内容进行数据展开成多列，展开的这些列不同的地方只是原先数据所在的列，与spark中的<code>explode</code>方法功能一致。</li>
+<li>可使用字典替代join加速查询。字典的介绍：<a href="https://www.altinity.com/blog/2017/4/12/dictionaries-explained" target="_blank" rel="noopener">https://www.altinity.com/blog/2017/4/12/dictionaries-explained</a>。</li>
+</ol>
+<h4 id="优化"><a href="#优化" class="headerlink" title="优化"></a>优化</h4><p>主要是本人在这一两周内的使用心得，涉及到的优化层面还是很小，以后如果有新的东西再添加。</p>
+<h5 id="集群优化"><a href="#集群优化" class="headerlink" title="集群优化"></a>集群优化</h5><p>使用集群分片的分布式查询方式在大规模数据下会有显著的效果。</p>
+<h5 id="SQL优化"><a href="#SQL优化" class="headerlink" title="SQL优化"></a>SQL优化</h5><p>SQL优化是一个很重要的手段，用好了能达到很高的优化性能。</p>
+<ol>
+<li><p>尽量不适用子查询。</p>
+</li>
+<li><p>如果count(*)能够达到同等的效果，就不要使用count()某一列。</p>
+</li>
+<li><p>使用<code>union all</code>时，会出现所union的多条sql的并发执行，如果cpu资源不足会很耗时，具体方法请看并发优化这一小节。</p>
+</li>
+<li><p>分组并且分组内取<code>topN</code>时，可以使用<code>limit N by colunm</code>的方式：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 以brand_id做分组，取每个组内top N 的name</span></span><br><span class="line"><span class="keyword">select</span> brand_id, <span class="keyword">name</span>, <span class="keyword">count</span>(*) <span class="keyword">as</span> <span class="keyword">value</span> <span class="keyword">from</span> <span class="keyword">table</span> <span class="keyword">group</span> <span class="keyword">by</span> brand_id, <span class="keyword">name</span> <span class="keyword">order</span> <span class="keyword">by</span> <span class="keyword">value</span> <span class="keyword">limit</span> N <span class="keyword">by</span> brand_id <span class="keyword">limit</span> <span class="number">100</span>;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>再某些情况下使用<code>prewhere</code>作用于非索引列进行优化，<code>prewhere</code>的使用介绍：<a href="https://github.com/yandex/ClickHouse/issues/2601" target="_blank" rel="noopener">prewhere 作用于非索引列 https://github.com/yandex/ClickHouse/issues/2601</a></p>
+</li>
+</ol>
+<h5 id="并发优化"><a href="#并发优化" class="headerlink" title="并发优化"></a>并发优化</h5><p>Clickhouse支持并发，并且支持的最大并发数能够在配置文件里面配置，默认为一百。但是clickhouse的并发性能不好，经过测试还倒不如串行执行的效果好。本人的环境是8核心，32G内存的3台主机3分片的集群，执行单条SQL时通过<code>top</code>命令查看，3台机器的8个核心都跑满，我想这也是MPP架构以及clickhouse的厉害之处，能够充分利用计算资源，所以我认为当并发执行的时候会导致CPU并发的上下文切换花费过多时间。</p>
+<p>既然每条SQL都能够将CPU跑满，那么是否可以控制单个查询cpu的使用个数。通过查文档，可以通过<code>max_threads</code>来设置，而且<code>max_threads</code>的默认数就刚好为8。我将<code>max_threads</code>设置为4，然后并发执行两条SQL，将结果与<code>max_threads</code>设置为8串行执行两条sql进行对比，时间性能上有一点点提高，虽然不明显，但可喜。</p>
+<p>除了设置<code>max_threads</code>，考虑到集群查询做汇总时主节点的计算压力比较大，所以我再所有的3个分片节点上都建了分布式表，将所有sql平均分给3个主机，每个主机的并发度为1，<code>max_threads</code>设置为2，理想状况下就不会有CPU竞争情况。</p>
+<h4 id="系统库system"><a href="#系统库system" class="headerlink" title="系统库system"></a>系统库system</h4><p>通过<code>system</code>库里的各种表可以监控clickhouse的性能以及各种配置情况，比如通过<code>log_queries</code>表可以查询各种sql的执行情况，但是此表默认不开启。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/clickhosue/" rel="tag"># clickhosue</a>
+          
+            <a href="/tags/olap/" rel="tag"># olap</a>
+          
+            <a href="/tags/MPP/" rel="tag"># MPP</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/06/python画图工具matplotlib使用/" rel="next" title="python画图工具matplotlib使用">
+                <i class="fa fa-chevron-left"></i> python画图工具matplotlib使用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/user_defined/logo.jpg"
+                alt="Alex Wong" />
+            
+              <p class="site-author-name" itemprop="name">Alex Wong</p>
+              <p class="site-description motion-element" itemprop="description">不管年龄大小，每个人都是我的老师</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">30</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">42</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://shalk.github.io/" title="shalk" target="_blank">shalk</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://luckylau.tech/" title="luckylau" target="_blank">luckylau</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Clickhouse-使用总结"><span class="nav-number">1.</span> <span class="nav-text">Clickhouse 使用总结</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#配置文件"><span class="nav-number">1.1.</span> <span class="nav-text">配置文件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#客户端"><span class="nav-number">1.2.</span> <span class="nav-text">客户端</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#JDBC"><span class="nav-number">1.2.1.</span> <span class="nav-text">JDBC</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#HTTTP"><span class="nav-number">1.2.2.</span> <span class="nav-text">HTTTP</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#建表"><span class="nav-number">1.3.</span> <span class="nav-text">建表</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#本地表"><span class="nav-number">1.3.1.</span> <span class="nav-text">本地表</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#分布式表"><span class="nav-number">1.3.2.</span> <span class="nav-text">分布式表</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SQL与优化"><span class="nav-number">1.4.</span> <span class="nav-text">SQL与优化</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#高阶SQL"><span class="nav-number">1.4.1.</span> <span class="nav-text">高阶SQL</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#优化"><span class="nav-number">1.5.</span> <span class="nav-text">优化</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#集群优化"><span class="nav-number">1.5.1.</span> <span class="nav-text">集群优化</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#SQL优化"><span class="nav-number">1.5.2.</span> <span class="nav-text">SQL优化</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#并发优化"><span class="nav-number">1.5.3.</span> <span class="nav-text">并发优化</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#系统库system"><span class="nav-number">1.6.</span> <span class="nav-text">系统库system</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Alex Wong</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
