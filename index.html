@@ -1279,7 +1279,7 @@
 
       
         
-          <p>##背景<br>前些时间，运维的同事反应小文件过多问题，需要我们去处理，所以想到是以何种手段去合并现有的小文件。我们知道Hadoop需要在namenode维护文件索引相关的metadata，所以小文件过多意味着消耗更大的内存空间。</p>
+          <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>前些时间，运维的同事反应小文件过多问题，需要我们去处理，所以想到是以何种手段去合并现有的小文件。我们知道Hadoop需要在namenode维护文件索引相关的metadata，所以小文件过多意味着消耗更大的内存空间。</p>
 <h2 id="过程"><a href="#过程" class="headerlink" title="过程"></a>过程</h2><p>经过网上的调研发现通过hive表使用orc格式进行存储能够通过<code>concatenate</code>命令对分区进行小文件合并，并且能够节省80%以上的存储空间，真是喜闻乐见！</p>
           <!--noindex-->
           <div class="post-button text-center">
