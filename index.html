@@ -1100,7 +1100,7 @@
 
       
         
-          <p>因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内<br>同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时<br>也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。</p>
+          <p>因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2018/10/12/spark-sql-调优/#more" rel="contents">
@@ -1279,8 +1279,8 @@
 
       
         
-          <p>##背景<br>前些时间，运维的同事反应小文件过多问题，需要我们去处理，所以想到是以何种手段去合并现有的小文件。我们知道Hadoop需要在<br>namenode维护文件索引相关的metadata，所以小文件过多意味着消耗更大的内存空间。</p>
-<h2 id="过程"><a href="#过程" class="headerlink" title="过程"></a>过程</h2><p>经过网上的调研发现通过hive表使用orc格式进行存储能够通过<code>concatenate</code>命令对分区进行小文件合并，并且能够节省80%以上的<br>存储空间，真是喜闻乐见！</p>
+          <p>##背景<br>前些时间，运维的同事反应小文件过多问题，需要我们去处理，所以想到是以何种手段去合并现有的小文件。我们知道Hadoop需要在namenode维护文件索引相关的metadata，所以小文件过多意味着消耗更大的内存空间。</p>
+<h2 id="过程"><a href="#过程" class="headerlink" title="过程"></a>过程</h2><p>经过网上的调研发现通过hive表使用orc格式进行存储能够通过<code>concatenate</code>命令对分区进行小文件合并，并且能够节省80%以上的存储空间，真是喜闻乐见！</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2018/09/06/解决hive表小文件过多问题/#more" rel="contents">
@@ -1651,7 +1651,7 @@
 
       
         
-          <h3 id="准备条件"><a href="#准备条件" class="headerlink" title="准备条件"></a>准备条件</h3><p>由于本人的开发机是win10，所以打算在本地搭建spark开发环境，以便于调试。由于目前公司使用的版本<br>是spark-2.1.0，hadoop-2.7.1，所以在spark官网上下载的包为spark-2.1.0-bin-hadoop2.7，在hadoop官网下载<br>hadoop-2.7.1包，然后将这两个包解压。（注意这两个包所在的路径不要有中文或是空格，要不然会出错！），另外还需要去下载对应Hadoop版本<br>的winutils.ext工具，解压后放在~/hadoop-2.7.1/bin目录下，可下载地址为：<a href="https://github.com/steveloughran/winutils" target="_blank" rel="noopener">https://github.com/steveloughran/winutils</a></p>
+          <h3 id="准备条件"><a href="#准备条件" class="headerlink" title="准备条件"></a>准备条件</h3><p>由于本人的开发机是win10，所以打算在本地搭建spark开发环境，以便于调试。由于目前公司使用的版本是spark-2.1.0，hadoop-2.7.1，所以在spark官网上下载的包为spark-2.1.0-bin-hadoop2.7，在hadoop官网下载hadoop-2.7.1包，然后将这两个包解压。（注意这两个包所在的路径不要有中文或是空格，要不然会出错！），另外还需要去下载对应Hadoop版本的winutils.ext工具，解压后放在~/hadoop-2.7.1/bin目录下，可下载地址为：<a href="https://github.com/steveloughran/winutils" target="_blank" rel="noopener">https://github.com/steveloughran/winutils</a></p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2018/07/06/搭建spark本地开发环境/#more" rel="contents">
@@ -1830,8 +1830,8 @@
 
       
         
-          <h3 id="原由"><a href="#原由" class="headerlink" title="原由"></a>原由</h3><p>每当更改了前端某些js，html等文件，并重新发布服务时总是得需要清理浏览器缓存，要不然<br>无法正确显示页面。要想理解浏览器缓存的逻辑可参考这篇文章：<a href="https://www.cnblogs.com/lyzg/p/5125934.html" target="_blank" rel="noopener">浏览器缓存知识</a><br>。</p>
-<p>尝试做过一些修改比如参考<a href="https://www.jianshu.com/p/cce9511c0914" target="_blank" rel="noopener">我想转行之—-微信浏览器缓存</a> ,但是<br>这些方法要么实现不够优雅过于麻烦，要么指标不治本。</p>
+          <h3 id="原由"><a href="#原由" class="headerlink" title="原由"></a>原由</h3><p>每当更改了前端某些js，html等文件，并重新发布服务时总是得需要清理浏览器缓存，要不然无法正确显示页面。要想理解浏览器缓存的逻辑可参考这篇文章：<a href="https://www.cnblogs.com/lyzg/p/5125934.html" target="_blank" rel="noopener">浏览器缓存知识</a>。</p>
+<p>尝试做过一些修改比如参考<a href="https://www.jianshu.com/p/cce9511c0914" target="_blank" rel="noopener">我想转行之—-微信浏览器缓存</a> ,但是这些方法要么实现不够优雅过于麻烦，要么指标不治本。</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2018/06/28/解决浏览器缓存带来的问题/#more" rel="contents">

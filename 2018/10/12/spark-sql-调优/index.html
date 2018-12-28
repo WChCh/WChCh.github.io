@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="Alex‘s Blog">
 <meta property="og:description" content="因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-10-14T09:56:08.632Z">
+<meta property="og:updated_time" content="2018-12-28T09:48:06.155Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="spark sql 调优">
 <meta name="twitter:description" content="因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。">
@@ -385,7 +385,7 @@
       
 
       
-        <p>因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内<br>同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时<br>也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。</p>
+        <p>因为在电商工作所有有机会接触到上百甚至上千亿级的数据，所以在实际工作当中难免会遇到资源配置调优和数据倾斜问题，通过组内同事以及网上各种教程的帮助，终于解决了一系列问题，达到了了上线标准。感谢组内老大给我这么多的时间让我去学习，去研究，同时也希望将这个过程记录下来作为以后避免以后遇到类似问题时做重复的工作。</p>
 <a id="more"></a>
 <h3 id="资源配置"><a href="#资源配置" class="headerlink" title="资源配置"></a>资源配置</h3><p>由于开始时资源配置不合理，导致出现了各种各样的问题，解决了这些问题之后，配置如下：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">#!/usr/bin/env bash</span><br><span class="line">spark-submit --deploy-mode client --master yarn \</span><br><span class="line">     --queue root.bdp_jmart_ad.jd_ad_dmp \</span><br><span class="line">     --conf spark.rdd.compress=true \</span><br><span class="line">     --conf spark.sql.shuffle.partitions=10000 \</span><br><span class="line">     --conf spark.yarn.executor.memoryOverhead=9216 \</span><br><span class="line">     --conf spark.network.timeout=1800 \</span><br><span class="line">     --conf spark.sql.broadcastTimeout=1800 \</span><br><span class="line">     --conf spark.executor.heartbeatInterval=20 \</span><br><span class="line">     --conf spark.shuffle.service.enabled=true \</span><br><span class="line">     --executor-memory 27g \</span><br><span class="line">     --executor-cores 3 \</span><br><span class="line">     --num-executors 90 \</span><br><span class="line">     --driver-memory 10g \</span><br><span class="line">     --conf spark.driver.maxResultSize=6g \</span><br><span class="line">     --driver-java-options &quot;-XX:MaxPermSize=4096m&quot; ./xxxxxxx.py</span><br></pre></td></tr></table></figure>

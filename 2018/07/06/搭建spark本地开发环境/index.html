@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="Alex‘s Blog">
 <meta property="og:description" content="准备条件由于本人的开发机是win10，所以打算在本地搭建spark开发环境，以便于调试。由于目前公司使用的版本是spark-2.1.0，hadoop-2.7.1，所以在spark官网上下载的包为spark-2.1.0-bin-hadoop2.7，在hadoop官网下载hadoop-2.7.1包，然后将这两个包解压。（注意这两个包所在的路径不要有中文或是空格，要不然会出错！），另外还需要去下载对应H">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-10-14T09:56:19.733Z">
+<meta property="og:updated_time" content="2018-12-28T09:52:41.549Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="搭建spark本地开发环境">
 <meta name="twitter:description" content="准备条件由于本人的开发机是win10，所以打算在本地搭建spark开发环境，以便于调试。由于目前公司使用的版本是spark-2.1.0，hadoop-2.7.1，所以在spark官网上下载的包为spark-2.1.0-bin-hadoop2.7，在hadoop官网下载hadoop-2.7.1包，然后将这两个包解压。（注意这两个包所在的路径不要有中文或是空格，要不然会出错！），另外还需要去下载对应H">
@@ -396,7 +396,7 @@
       
 
       
-        <h3 id="准备条件"><a href="#准备条件" class="headerlink" title="准备条件"></a>准备条件</h3><p>由于本人的开发机是win10，所以打算在本地搭建spark开发环境，以便于调试。由于目前公司使用的版本<br>是spark-2.1.0，hadoop-2.7.1，所以在spark官网上下载的包为spark-2.1.0-bin-hadoop2.7，在hadoop官网下载<br>hadoop-2.7.1包，然后将这两个包解压。（注意这两个包所在的路径不要有中文或是空格，要不然会出错！），另外还需要去下载对应Hadoop版本<br>的winutils.ext工具，解压后放在~/hadoop-2.7.1/bin目录下，可下载地址为：<a href="https://github.com/steveloughran/winutils" target="_blank" rel="noopener">https://github.com/steveloughran/winutils</a></p>
+        <h3 id="准备条件"><a href="#准备条件" class="headerlink" title="准备条件"></a>准备条件</h3><p>由于本人的开发机是win10，所以打算在本地搭建spark开发环境，以便于调试。由于目前公司使用的版本是spark-2.1.0，hadoop-2.7.1，所以在spark官网上下载的包为spark-2.1.0-bin-hadoop2.7，在hadoop官网下载hadoop-2.7.1包，然后将这两个包解压。（注意这两个包所在的路径不要有中文或是空格，要不然会出错！），另外还需要去下载对应Hadoop版本的winutils.ext工具，解压后放在~/hadoop-2.7.1/bin目录下，可下载地址为：<a href="https://github.com/steveloughran/winutils" target="_blank" rel="noopener">https://github.com/steveloughran/winutils</a></p>
 <a id="more"></a>
 <p>此时可以配置系统环境变量：</p>
 <ol>
@@ -408,10 +408,10 @@
 <ol>
 <li>首先安装python sdk，文件路径中不要存在空格或是中文字符</li>
 <li>在~\Python2.7\Scripts目录下使用pip安装 py4j ： pip install py4j</li>
-<li>将~\spark-2.1.0-bin-hadoop2.7\python\pyspark目录拷贝至~\Python2.7\Lib\site-packages目录下<br>作用是编写代码是能过够有spark相关引用的提示。</li>
+<li>将~\spark-2.1.0-bin-hadoop2.7\python\pyspark目录拷贝至~\Python2.7\Lib\site-packages目录下作用是编写代码是能过够有spark相关引用的提示。</li>
 <li>再IDE中创建python，编写spark应用程序。</li>
 </ol>
-<p>如果没有设置’SPARK_HOME’，和’HADOOP_HOME’的环境变量，除了再IDE中单独为<br>每个application设置，还可以再代码中加入：</p>
+<p>如果没有设置’SPARK_HOME’，和’HADOOP_HOME’的环境变量，除了再IDE中单独为每个application设置，还可以再代码中加入：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">os.environ[&apos;SPARK_HOME&apos;] = &quot;D:\sparkenv\spark-2.1.0-bin-hadoop2.7&quot;</span><br><span class="line">os.environ[&apos;HADOOP_HOME&apos;] = &quot;D:\sparkenv\hadoop-2.7.1&quot;</span><br></pre></td></tr></table></figure>
 <p>代码中还必须添加(<a href="https://blog.csdn.net/u010793236/article/details/73549223" target="_blank" rel="noopener">原因</a>)：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># Append pyspark to Python Path</span><br><span class="line">sys.path.append(&quot;D:\spark-1.6.0-bin-hadoop2.6\python&quot;)</span><br><span class="line">sys.path.append(&quot;D:\spark-1.6.0-bin-hadoop2.6\python\lib\py4j-0.9-src.zip&quot;)</span><br></pre></td></tr></table></figure>

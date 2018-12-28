@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="Alex‘s Blog">
 <meta property="og:description" content="##背景前些时间，运维的同事反应小文件过多问题，需要我们去处理，所以想到是以何种手段去合并现有的小文件。我们知道Hadoop需要在namenode维护文件索引相关的metadata，所以小文件过多意味着消耗更大的内存空间。 过程经过网上的调研发现通过hive表使用orc格式进行存储能够通过concatenate命令对分区进行小文件合并，并且能够节省80%以上的存储空间，真是喜闻乐见！">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-10-14T09:56:56.114Z">
+<meta property="og:updated_time" content="2018-12-28T09:49:56.779Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="解决hive表小文件过多问题">
 <meta name="twitter:description" content="##背景前些时间，运维的同事反应小文件过多问题，需要我们去处理，所以想到是以何种手段去合并现有的小文件。我们知道Hadoop需要在namenode维护文件索引相关的metadata，所以小文件过多意味着消耗更大的内存空间。 过程经过网上的调研发现通过hive表使用orc格式进行存储能够通过concatenate命令对分区进行小文件合并，并且能够节省80%以上的存储空间，真是喜闻乐见！">
@@ -385,8 +385,8 @@
       
 
       
-        <p>##背景<br>前些时间，运维的同事反应小文件过多问题，需要我们去处理，所以想到是以何种手段去合并现有的小文件。我们知道Hadoop需要在<br>namenode维护文件索引相关的metadata，所以小文件过多意味着消耗更大的内存空间。</p>
-<h2 id="过程"><a href="#过程" class="headerlink" title="过程"></a>过程</h2><p>经过网上的调研发现通过hive表使用orc格式进行存储能够通过<code>concatenate</code>命令对分区进行小文件合并，并且能够节省80%以上的<br>存储空间，真是喜闻乐见！</p>
+        <p>##背景<br>前些时间，运维的同事反应小文件过多问题，需要我们去处理，所以想到是以何种手段去合并现有的小文件。我们知道Hadoop需要在namenode维护文件索引相关的metadata，所以小文件过多意味着消耗更大的内存空间。</p>
+<h2 id="过程"><a href="#过程" class="headerlink" title="过程"></a>过程</h2><p>经过网上的调研发现通过hive表使用orc格式进行存储能够通过<code>concatenate</code>命令对分区进行小文件合并，并且能够节省80%以上的存储空间，真是喜闻乐见！</p>
 <a id="more"></a>
 <p>本文不再详细介绍orc，text，rc，parquet各种对比，具体可见网上相关文章，下面只是以举例为主。</p>
 <p>创建一个orc hive 表：</p>
@@ -397,7 +397,7 @@
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">alter table app.example_orc partition (dt=&quot;20180505&quot;) concatenate;</span><br></pre></td></tr></table></figure>
 <p>不足点：</p>
 <ol>
-<li>使用<code>concatenate</code>命令合并小文件时不能指定合并后的文件数量，虽然可以多次执行该命令，但显然不够优雅。<br>当多次使用<code>concatenate</code>后文件数量不在变化，这个跟参数<code>mapreduce.input.fileinputformat.split.minsize=256mb</code>的设定有有有关，<br>可设定每个文件的最小size，具体间链接4；</li>
+<li>使用<code>concatenate</code>命令合并小文件时不能指定合并后的文件数量，虽然可以多次执行该命令，但显然不够优雅。当多次使用<code>concatenate</code>后文件数量不在变化，这个跟参数<code>mapreduce.input.fileinputformat.split.minsize=256mb</code>的设定有有有关，可设定每个文件的最小size，具体间链接4；</li>
 <li>只能针对分区使用<code>concatenate</code>命令。</li>
 </ol>
 <p>参考连接：</p>
