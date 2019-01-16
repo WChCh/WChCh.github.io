@@ -21,6 +21,10 @@ def sync_profiles(spark, url, driver, yesterday):
         date=yesterday)
     result = spark.sql(userprofile_b_sql)
     properties = {'driver': driver,
+                  "socket_timeout": "300000",
+                  "rewriteBatchedStatements": "true",
+                  "batchsize": "1000000",
+                  "numPartitions": "1",
                   'user': 'root',
                   'password': '123456'}
 
@@ -44,6 +48,10 @@ if __name__ == '__main__':
 ```
 
 <!--more-->
+
+`"socket_timeout": "300000"`是为了解决`read time out`异常的问题，当某个分区的数据量较大时会出现这个问题，单位为毫秒。如果是Java语言参考：[https://github.com/yandex/clickhouse-jdbc/issues/159#issuecomment-364423414](https://github.com/yandex/clickhouse-jdbc/issues/159#issuecomment-364423414)
+
+`rewriteBatchedStatements`，`batchsize`, `numPartitions`解决`DB::Exception: Merges are processing signiﬁcantly slower than inserts`问题，原因是批次写入量少，并发多。`batchsize`控制批次写入量，`numPartitions`控制并发数，参考链接：[https://spark.apache.org/docs/latest/sql-data-sources-jdbc.html](https://spark.apache.org/docs/latest/sql-data-sources-jdbc.html)
 
 submit 任务的脚本如下：
 
@@ -69,3 +77,5 @@ spark-submit \
 ```
 
 说明**：这六个`clickhouse-jdbc-0.1.28.jar`,`guava-19.0.jar`,`httpclient-4.5.2.jar`,`httpcore-4.4.4.jar`,`joda-time-2.9.3.jar`,`lz4-1.3.0.jar` jar包一定要注意版本号，并且submit spark 任务时将jar包放在对应的目录下。
+
+还有一个需要大家帮忙解答的问题：通过spark导入数据完后发现在在clickhouse中跟hive的中的差了好多，然后不断地count()发现数据不断地增加，直到与hive中的一致，而且这个阶段花的时间也比较长。请大家帮忙解答其中原理。
