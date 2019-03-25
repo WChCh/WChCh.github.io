@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="clickhosue,olap,MPP," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Nested数据类型使用待写。 CSV http方式灌数命令1cat da.csv | curl &amp;apos;http://10.185.217.47:8123/?user=user&amp;amp;password=password&amp;amp;query=INSERT%20INTO%20table%20FORMAT%20CSV&amp;apos; 库、表操作库，表的创建，删除等操作加上on cluster clu">
+<meta name="keywords" content="clickhosue,olap,MPP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="clickhouse ReplicatedMergeTree使用">
+<meta property="og:url" content="https://wchch.github.io/2019/03/25/clickhouse-ReplicatedMergeTree使用/index.html">
+<meta property="og:site_name" content="Alex‘s Blog">
+<meta property="og:description" content="Nested数据类型使用待写。 CSV http方式灌数命令1cat da.csv | curl &amp;apos;http://10.185.217.47:8123/?user=user&amp;amp;password=password&amp;amp;query=INSERT%20INTO%20table%20FORMAT%20CSV&amp;apos; 库、表操作库，表的创建，删除等操作加上on cluster clu">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-03-25T10:10:42.434Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="clickhouse ReplicatedMergeTree使用">
+<meta name="twitter:description" content="Nested数据类型使用待写。 CSV http方式灌数命令1cat da.csv | curl &amp;apos;http://10.185.217.47:8123/?user=user&amp;amp;password=password&amp;amp;query=INSERT%20INTO%20table%20FORMAT%20CSV&amp;apos; 库、表操作库，表的创建，删除等操作加上on cluster clu">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://wchch.github.io/2019/03/25/clickhouse-ReplicatedMergeTree使用/"/>
+
+
+
+
+
+  <title>clickhouse ReplicatedMergeTree使用 | Alex‘s Blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Alex‘s Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Coding My Life</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2019/03/25/clickhouse-ReplicatedMergeTree使用/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Alex Wong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/user_defined/logo.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Alex‘s Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">clickhouse ReplicatedMergeTree使用</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-25T18:09:42+08:00">
+                2019-03-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/" itemprop="url" rel="index">
+                    <span itemprop="name">olap</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/" itemprop="url" rel="index">
+                    <span itemprop="name">BigData</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/clickhouse/" itemprop="url" rel="index">
+                    <span itemprop="name">clickhouse</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/clickhouse/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h4 id="Nested数据类型使用"><a href="#Nested数据类型使用" class="headerlink" title="Nested数据类型使用"></a>Nested数据类型使用</h4><p>待写。</p>
+<h4 id="CSV-http方式灌数命令"><a href="#CSV-http方式灌数命令" class="headerlink" title="CSV http方式灌数命令"></a>CSV http方式灌数命令</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat da.csv | curl &apos;http://10.185.217.47:8123/?user=user&amp;password=password&amp;query=INSERT%20INTO%20table%20FORMAT%20CSV&apos;</span><br></pre></td></tr></table></figure>
+<h4 id="库、表操作"><a href="#库、表操作" class="headerlink" title="库、表操作"></a>库、表操作</h4><p>库，表的创建，删除等操作加上<code>on cluster cluster1</code>说明，只在一个节点上操作即可实现集群同步。</p>
+<h4 id="相关问题"><a href="#相关问题" class="headerlink" title="相关问题"></a>相关问题</h4><p>问题删除分区时：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Password required for user default., e.what() = DB::Exception.&quot;</span><br></pre></td></tr></table></figure>
+<p>解决<a href="https://github.com/yandex/ClickHouse/issues/4762" target="_blank" rel="noopener">https://github.com/yandex/ClickHouse/issues/4762</a>：</p>
+<p>原因：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Generally, when you do some DDL on non-leader replica it forwards the request to a leader, and during that forwarding &quot;default&quot; passwordless user was used.</span><br><span class="line">从leader replica删除。</span><br></pre></td></tr></table></figure>
+<p>解决：选择所有的主副本删除即可，zookeeper会自动同步删除子副本的数据。</p>
+<a id="more"></a>
+<p>问题：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">Traceback (most recent call last):</span><br><span class="line">  File &quot;/data0/home/ads_model/wangchuanchao/anti_cheating/test/hive2clickhouse/./h2c_anti_cheating_log.py&quot;, line 40, in &lt;module&gt;</span><br><span class="line">    sync_profiles(spark, shard_index)</span><br><span class="line">  File &quot;/data0/home/ads_model/wangchuanchao/anti_cheating/test/hive2clickhouse/./h2c_anti_cheating_log.py&quot;, line 27, in sync_profiles</span><br><span class="line">    result_df.write.jdbc(url=url, table=table_ch_local, mode=&apos;append&apos;, properties=properties)</span><br><span class="line">  File &quot;/software/servers/tyrande/jd_ad/spark/python/lib/pyspark.zip/pyspark/sql/readwriter.py&quot;, line 765, in jdbc</span><br><span class="line">    self._jwrite.mode(mode).jdbc(url, table, jprop)</span><br><span class="line">  File &quot;/software/servers/tyrande/jd_ad/spark/python/lib/py4j-0.10.4-src.zip/py4j/java_gateway.py&quot;, line 1133, in __call__</span><br><span class="line">    answer, self.gateway_client, self.target_id, self.name)</span><br><span class="line">  File &quot;/software/servers/tyrande/jd_ad/spark/python/lib/pyspark.zip/pyspark/sql/utils.py&quot;, line 79, in deco</span><br><span class="line">    raise IllegalArgumentException(s.split(&apos;: &apos;, 1)[1], stackTrace)</span><br><span class="line">IllegalArgumentException: u&quot;Can&apos;t get JDBC type for struct&lt;hit_policy:array&lt;string&gt;,refund:int,experiment_group_id:int,gmv:double,anti_time:bigint,refund_time:bigint,more_filter:int,is_spam:int&gt;&quot;</span><br></pre></td></tr></table></figure>
+<p><a href="https://stackoverflow.com/questions/50201887/java-lang-illegalargumentexception-cant-get-jdbc-type-for-arraystring" target="_blank" rel="noopener">https://stackoverflow.com/questions/50201887/java-lang-illegalargumentexception-cant-get-jdbc-type-for-arraystring</a></p>
+<p><strong>未解决</strong>。</p>
+<p>JDBC灌数问题：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">2019.03.25 13:06:14.364337 [ 37531 ] &lt;Error&gt; executeQuery: Code: 27, e.displayText() = DB::Exception: Cannot parse input: expected \t before: \\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\t\\N\t\\N\t\\N\t59.63.206.227\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t2019-03-21\n\\N\t8c14467d237e48f39a2ba670fa41657d\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N\t\\N: (at row 1)</span><br><span class="line"></span><br><span class="line">Row 1:</span><br><span class="line">Column 0,   name: sid,              type: String,  parsed text: &quot;&lt;BACKSLASH&gt;N&quot;</span><br><span class="line">Column 1,   name: click_id,         type: String,  parsed text: &quot;78530fe4367d45c3a37f2cc81f49b354&quot;</span><br><span class="line">Column 2,   name: ad_spread_type,   type: Int32,   ERROR: text &quot;&lt;BACKSLASH&gt;N&lt;TAB&gt;&lt;BACKSLASH&gt;N&lt;TAB&gt;&lt;BACKSLASH&gt;N&lt;TAB&gt;&lt;BACKSLASH&gt;&quot; is not like Int32</span><br><span class="line"></span><br><span class="line">, e.what() = DB::Exception (from [::ffff:10.198.145.69]:21814) (in query: INSERT INTO ad_base2_click_local (&quot;sid&quot;,&quot;click_id&quot;,&quot;ad_spread_type&quot;,&quot;ad_traffic_group&quot;,&quot;ad_traffic_type&quot;,&quot;ad_plan_id&quot;,&quot;last_pos_id&quot;,&quot;last_click_id&quot;,&quot;sku_id&quot;,&quot;act_price&quot;,&quot;advertise_pin&quot;,&quot;user_pin&quot;,&quot;user_id&quot;,&quot;device_id&quot;,&quot;user_ip&quot;,&quot;device_type&quot;,&quot;retrieval_type&quot;,&quot;keyword&quot;,&quot;day&quot;,&quot;click_time&quot;,&quot;jda_time&quot;,&quot;is_bill&quot;,&quot;click_ip&quot;,&quot;ua&quot;,&quot;dsp_posid&quot;,&quot;behaviour&quot;,&quot;anti_info&quot;,&quot;charge_data&quot;,&quot;utm_term&quot;,&quot;dt&quot;)  FORMAT TabSeparated), Stack trace:</span><br></pre></td></tr></table></figure>
+<p>用特殊标记 (<a href="https://clickhouse.yandex/docs/zh/query_language/syntax/" target="_blank" rel="noopener">NULL</a>) 表示”缺失值”，可以与 <code>TypeName</code> 的正常值存放一起。例如，<code>Nullable(Int8)</code> 类型的列可以存储 <code>Int8</code> 类型值，而没有值的行将存储 <code>NULL</code>。</p>
+<p><strong>注意</strong>：如果是在别的机器上通过jdbc导入，出此错误是看到的可能会是乱码，可登陆到clickhouse所在机器查看服务非乱码报错的信息，以更快速定位问题。</p>
+<p>CSV灌数问题：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">cat da.csv | curl &apos;http://10.185.217.47:8123/?user=user&amp;password=password&amp;query=INSERT%20INTO%20table%20FORMAT%20CSV&apos;</span><br><span class="line">Code: 27, e.displayText() = DB::Exception: Cannot parse input: expected , before: hit_policy\\&quot;:[],\\&quot;refund\\&quot;:0,\\&quot;experiment_group_id\\&quot;:0,\\&quot;ce\\&quot;:0,\\&quot;fake: (at row 1)</span><br><span class="line"></span><br><span class="line">Row 1:</span><br><span class="line">Column 0,   name: sid,              type: String,  parsed text: &quot;571&quot;</span><br><span class="line">Column 1,   name: click_id,         type: String,  parsed text: &quot;ba3aa5ce-e7d9-4fa2-9f92-5c08224d178f&quot;</span><br><span class="line">Column 2,   name: ad_spread_type,   type: Int32,   parsed text: &quot;1&quot;</span><br><span class="line">Column 3,  name: anti_info,        type: String,  parsed text: &quot;&lt;DOUBLE QUOTE&gt;&#123;&lt;BACKSLASH&gt;&lt;DOUBLE QUOTE&gt;&quot;</span><br><span class="line">ERROR: There is no delimiter (,). &quot;h&quot; found instead.</span><br></pre></td></tr></table></figure>
+<p>解决方法：</p>
+<p>clickhouse遵守csv文件格式规范，请注意csv的字符转义规范，比如双引号中嵌套双引号，通常情况下是：<code>&quot;\&quot;&quot;</code>，csv规范下是<code>&quot;&quot;&quot;&quot;</code>，等到的效果都是<code>&quot;&quot;&quot;</code>。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/clickhosue/" rel="tag"># clickhosue</a>
+          
+            <a href="/tags/olap/" rel="tag"># olap</a>
+          
+            <a href="/tags/MPP/" rel="tag"># MPP</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/25/pyspark中删除dataframe中的嵌套列/" rel="next" title="pyspark中删除dataframe中的嵌套列">
+                <i class="fa fa-chevron-left"></i> pyspark中删除dataframe中的嵌套列
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/user_defined/logo.jpg"
+                alt="Alex Wong" />
+            
+              <p class="site-author-name" itemprop="name">Alex Wong</p>
+              <p class="site-description motion-element" itemprop="description">不管年龄大小，每个人都是我的老师</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">43</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">48</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://shalk.github.io/" title="shalk" target="_blank">shalk</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://luckylau.tech/" title="luckylau" target="_blank">luckylau</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Nested数据类型使用"><span class="nav-number">1.</span> <span class="nav-text">Nested数据类型使用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#CSV-http方式灌数命令"><span class="nav-number">2.</span> <span class="nav-text">CSV http方式灌数命令</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#库、表操作"><span class="nav-number">3.</span> <span class="nav-text">库、表操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#相关问题"><span class="nav-number">4.</span> <span class="nav-text">相关问题</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Alex Wong</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
