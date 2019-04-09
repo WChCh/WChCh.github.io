@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="Alex‘s Blog">
 <meta property="og:description" content="问题近日处理一些大数据时老是出现OutOfMemoryError: Direct buffer memory的问题，一开始以为是数据倾斜问题，然后使用拆分倾斜key分别join再union的方法处理数据倾斜。后来测试发现，反而是非倾斜部分的数据进行join时出现了此问题。 实验过程我做了些实验：  大表column1中-和notset字符串的量分别为8.5亿和2.8亿，占了大约总量的二分之一。 这">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-04-09T11:07:59.678Z">
+<meta property="og:updated_time" content="2019-04-09T11:15:29.174Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="解决OutOfMemoryError: Direct buffer memory问题">
 <meta name="twitter:description" content="问题近日处理一些大数据时老是出现OutOfMemoryError: Direct buffer memory的问题，一开始以为是数据倾斜问题，然后使用拆分倾斜key分别join再union的方法处理数据倾斜。后来测试发现，反而是非倾斜部分的数据进行join时出现了此问题。 实验过程我做了些实验：  大表column1中-和notset字符串的量分别为8.5亿和2.8亿，占了大约总量的二分之一。 这">
@@ -396,8 +396,8 @@
 </ol>
 <a id="more"></a>
 <h4 id="原因分析"><a href="#原因分析" class="headerlink" title="原因分析"></a>原因分析</h4><p>根据“SortMergeJoin”原理，我认为是：</p>
-<pre><code>1. 虽然df_click_order中没有“-”或是字符串“null”，但是仍会将df_behavior中的“-”和字符串“null” shuffle到某些分区中，因为量大这样可能导致内存溢出。
-</code></pre><p>所以好的优化方法是：</p>
+<p>虽然小表table1中没有<code>-</code>或是字符串<code>notset</code>，但是仍会将大表table2中的<code>-</code>和字符串<code>notset</code>  shuffle到某些分区中，因为量大这样可能导致内存溢出。</p>
+<p>所以好的优化方法是：</p>
 <ol>
 <li>左关联中，将左表中没有的key，但是在右表中量又是特别大的提前从右表中剔除掉。</li>
 </ol>
