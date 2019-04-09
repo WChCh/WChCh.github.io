@@ -26,7 +26,7 @@ categories: [大数据,BigData,Spark,Spark-Sql，调优]
 
 根据“SortMergeJoin”原理，我认为是：
 
-    1. 虽然df_click_order中没有“-”或是字符串“null”，但是仍会将df_behavior中的“-”和字符串“null” shuffle到某些分区中，因为量大这样可能导致内存溢出。
+虽然小表table1中没有`-`或是字符串`notset`，但是仍会将大表table2中的`-`和字符串`notset`  shuffle到某些分区中，因为量大这样可能导致内存溢出。
 
 
 所以好的优化方法是：
