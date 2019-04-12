@@ -2,6 +2,20 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://wchch.github.io/2019/04/12/spark-jdbc%E5%AF%BC%E6%95%B0clickhouse%E6%97%B6attempt%E7%9A%84%E5%9D%91/</loc>
+    
+    <lastmod>2019-04-12T10:00:10.560Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://wchch.github.io/2019/04/12/%E8%A7%A3%E5%86%B3clickhouse%E6%89%B9%E9%87%8F%E6%8F%92%E5%85%A5%E6%97%B6%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%AF%BC%E8%87%B4docker%E6%8C%82%E6%8E%89%E7%9A%84%E9%97%AE%E9%A2%98/</loc>
+    
+    <lastmod>2019-04-12T09:47:59.820Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://wchch.github.io/2019/04/09/%E8%A7%A3%E5%86%B3OutOfMemoryError-Direct-buffer-memory%E9%97%AE%E9%A2%98/</loc>
     
     <lastmod>2019-04-09T11:15:29.174Z</lastmod>
