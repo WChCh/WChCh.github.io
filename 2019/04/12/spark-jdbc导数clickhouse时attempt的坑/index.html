@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="Alex‘s Blog">
 <meta property="og:description" content="问题spark 的容错机制会使得spark application失败时尝试重启，从web ui中我们就可以看到其Attempt ID大于1。这是个好的机制，但是对于通过jdbc将数据导入clichouse的过程来说却是个不好的体验。因为如果重启的application的话会导致导入的数据重复，使得总的数据量增多，然后zookeeper有数据块的校验机制。 可通过--conf spark.yarn">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-04-12T10:00:10.560Z">
+<meta property="og:updated_time" content="2019-05-16T04:52:03.101Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="spark jdbc导数clickhouse时attempt的坑">
 <meta name="twitter:description" content="问题spark 的容错机制会使得spark application失败时尝试重启，从web ui中我们就可以看到其Attempt ID大于1。这是个好的机制，但是对于通过jdbc将数据导入clichouse的过程来说却是个不好的体验。因为如果重启的application的话会导致导入的数据重复，使得总的数据量增多，然后zookeeper有数据块的校验机制。 可通过--conf spark.yarn">
@@ -388,6 +388,14 @@
         <h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>spark 的容错机制会使得spark application失败时尝试重启，从web ui中我们就可以看到其<code>Attempt ID</code>大于1。这是个好的机制，但是对于通过jdbc将数据导入clichouse的过程来说却是个不好的体验。因为如果重启的application的话会导致导入的数据重复，使得总的数据量增多，然后zookeeper有数据块的校验机制。</p>
 <p>可通过<code>--conf spark.yarn.maxAppAttempts=1</code>使得application的重启次数为1，但是又带来可能出现的数据导入不全的情况出现。</p>
 <p>看来得寻找一种好的数据导入工具，希望是操作友好，可视化，有监控，易管理，数据不会重复导入的工具。网上看了一下好像NIFI还不错，先调研调研。</p>
+<h3 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h3><p>加快导数clickhouse的速度，缩短导入时间，这样就能够大概率上避免spark attempt的出现。具体方法是：</p>
+<p>在spark的jdbc properties中</p>
+<ol>
+<li>设置合适的batchsize。</li>
+<li>设置合适的并发度。</li>
+<li>设置合适的内存使用量。</li>
+</ol>
+<p>可参考上篇文章：<a href="https://wchch.github.io/2019/04/12/%E8%A7%A3%E5%86%B3clickhouse%E6%89%B9%E9%87%8F%E6%8F%92%E5%85%A5%E6%97%B6%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%AF%BC%E8%87%B4docker%E6%8C%82%E6%8E%89%E7%9A%84%E9%97%AE%E9%A2%98/#more">解决clickhouse批量插入时内存溢出导致docker挂掉的问题</a></p>
 
       
     </div>
@@ -588,7 +596,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#问题"><span class="nav-number">1.</span> <span class="nav-text">问题</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#问题"><span class="nav-number">1.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解决方法"><span class="nav-number">2.</span> <span class="nav-text">解决方法</span></a></li></ol></div>
             
 
           </div>

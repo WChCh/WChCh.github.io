@@ -366,7 +366,9 @@
       
         
           <p>superset中仅仅是对数据表的操作很多时候还是没法满足我们的数据展示需求，因此superset提供了jinja template的方式让我们更为灵活地自定义sql语句。</p>
-<h4 id="使用说明"><a href="#使用说明" class="headerlink" title="使用说明"></a>使用说明</h4><p>通过jinja中文文档<a href="http://docs.jinkan.org/docs/jinja2/templates.html，我们可以了解jinja" target="_blank" rel="noopener">http://docs.jinkan.org/docs/jinja2/templates.html，我们可以了解jinja</a> template如何使用，包括分隔符。（前者用于执行诸如 for 循环 或赋值的语句，后者把表达式的结果打印到模板上），filters，条件判断，宏等。</p>
+<h4 id="使用说明"><a href="#使用说明" class="headerlink" title="使用说明"></a>使用说明</h4><p>通过jinja中文文档<a href="http://docs.jinkan.org/docs/jinja2/templates.html，我们可以了解jinja" target="_blank" rel="noopener">http://docs.jinkan.org/docs/jinja2/templates.html，我们可以了解jinja</a> template如何使用，包括各种分隔符: </p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;% ... %&#125;</span><br><span class="line">&#123;&#123; ... &#125;&#125;</span><br></pre></td></tr></table></figure>
+<p>前者用于执行诸如 for 循环 或赋值的语句，后者把表达式的结果打印到模板上，filters，条件判断，宏等。</p>
 <p>superset关于jinja template的说明：<a href="https://superset.incubator.apache.org/sqllab.html。其中superset提供了`filter_values`和`url_param`两个jinja方法，其中`filter_values`更为重要。`filter_values`可以接收filter_box这个chart的值，并且以列表的方式输出。" target="_blank" rel="noopener">https://superset.incubator.apache.org/sqllab.html。其中superset提供了`filter_values`和`url_param`两个jinja方法，其中`filter_values`更为重要。`filter_values`可以接收filter_box这个chart的值，并且以列表的方式输出。</a></p>
 <p>superset还提供了一些操作函数，与python的import层级一一对应，比如：</p>
 <ul>
@@ -559,6 +561,14 @@
             <h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>spark 的容错机制会使得spark application失败时尝试重启，从web ui中我们就可以看到其<code>Attempt ID</code>大于1。这是个好的机制，但是对于通过jdbc将数据导入clichouse的过程来说却是个不好的体验。因为如果重启的application的话会导致导入的数据重复，使得总的数据量增多，然后zookeeper有数据块的校验机制。</p>
 <p>可通过<code>--conf spark.yarn.maxAppAttempts=1</code>使得application的重启次数为1，但是又带来可能出现的数据导入不全的情况出现。</p>
 <p>看来得寻找一种好的数据导入工具，希望是操作友好，可视化，有监控，易管理，数据不会重复导入的工具。网上看了一下好像NIFI还不错，先调研调研。</p>
+<h3 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h3><p>加快导数clickhouse的速度，缩短导入时间，这样就能够大概率上避免spark attempt的出现。具体方法是：</p>
+<p>在spark的jdbc properties中</p>
+<ol>
+<li>设置合适的batchsize。</li>
+<li>设置合适的并发度。</li>
+<li>设置合适的内存使用量。</li>
+</ol>
+<p>可参考上篇文章：<a href="https://wchch.github.io/2019/04/12/%E8%A7%A3%E5%86%B3clickhouse%E6%89%B9%E9%87%8F%E6%8F%92%E5%85%A5%E6%97%B6%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%AF%BC%E8%87%B4docker%E6%8C%82%E6%8E%89%E7%9A%84%E9%97%AE%E9%A2%98/#more">解决clickhouse批量插入时内存溢出导致docker挂掉的问题</a></p>
 
           
         
