@@ -9,7 +9,14 @@ superset中仅仅是对数据表的操作很多时候还是没法满足我们的
 
 #### 使用说明
 
-通过jinja中文文档http://docs.jinkan.org/docs/jinja2/templates.html，我们可以了解jinja template如何使用，包括分隔符。（前者用于执行诸如 for 循环 或赋值的语句，后者把表达式的结果打印到模板上），filters，条件判断，宏等。
+通过jinja中文文档http://docs.jinkan.org/docs/jinja2/templates.html，我们可以了解jinja template如何使用，包括各种分隔符: 
+
+```python
+{% ... %}
+{{ ... }} 
+```
+
+前者用于执行诸如 for 循环 或赋值的语句，后者把表达式的结果打印到模板上，filters，条件判断，宏等。
 
 superset关于jinja template的说明：https://superset.incubator.apache.org/sqllab.html。其中superset提供了`filter_values`和`url_param`两个jinja方法，其中`filter_values`更为重要。`filter_values`可以接收filter_box这个chart的值，并且以列表的方式输出。
 
