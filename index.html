@@ -262,6 +262,187 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2019/06/14/解决clickhouse并发问题之CHproxy安装配置/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Alex Wong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/user_defined/logo.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Alex‘s Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/06/14/解决clickhouse并发问题之CHproxy安装配置/" itemprop="url">解决clickhouse并发问题之CHproxy安装配置</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-06-14T21:33:52+08:00">
+                2019-06-14
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/" itemprop="url" rel="index">
+                    <span itemprop="name">olap</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/" itemprop="url" rel="index">
+                    <span itemprop="name">BigData</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/clickhouse/" itemprop="url" rel="index">
+                    <span itemprop="name">clickhouse</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/clickhouse/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>由于新的superset看板查询时每个chart涉及到的底表数据量增加以及并发较多导致clickhouse因为OOM挂掉而返回错误，并且影响到别的看板的使用以及整个系统的稳定性。但是单独查询某个chart是并没有问题，因此需要控制看板查询时的并发度。</p>
+<h3 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h3><p>通过调研以及社区的帮助，可通过代理的方式控制并发度，并且可使用的代理有<code>[ProxySQL](https://proxysql.com/)</code>以及专门为clickhouse开发的第三方<a href="https://github.com/Vertamedia/chproxy" target="_blank" rel="noopener">CHproxy</a>。考虑到CHproxy对clickhouse的很多原生配置特性支持的比较好，比如<code>set</code>属性相关的（可以控制每个查询所使用的最大内存等）以及负载均衡，并发控制等等很多特性，故选择了CHproxy。</p>
+<h3 id="安装部署"><a href="#安装部署" class="headerlink" title="安装部署"></a>安装部署</h3><p>CHproxy因为是go语言写的，因此安装部署也很简单，也可以通过docker进行部署，具体可以参考文档。启动命令如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./chproxy -config=/path/to/config.yml</span><br></pre></td></tr></table></figure>
+<p>下面是配置文件，仅供参考：</p>
+<p><code>config.yml</code></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line">server:</span><br><span class="line">  http:</span><br><span class="line">      listen_addr: ":9092"</span><br><span class="line"></span><br><span class="line">      # Networks with reporting servers.</span><br><span class="line">      allowed_networks: ["11.3.0.0/16","172.0.0.0/8","127.0.0.0/8"]</span><br><span class="line"></span><br><span class="line">users:</span><br><span class="line">  - name: "proxy-user"</span><br><span class="line">    password: "password"</span><br><span class="line">    to_cluster: "select"</span><br><span class="line">    to_user: "user"</span><br><span class="line">    max_concurrent_queries: 10</span><br><span class="line">    max_execution_time: 3m</span><br><span class="line">    max_queue_size: 120</span><br><span class="line">    max_queue_time: 120s</span><br><span class="line">    cache: "shortterm"</span><br><span class="line">    params: "cron-job"</span><br><span class="line"></span><br><span class="line">clusters:</span><br><span class="line">  - name: "select"</span><br><span class="line">    replicas:</span><br><span class="line">      - name: "replica1"</span><br><span class="line">        nodes: ["ip11:8123", "ip21:8123"]</span><br><span class="line">      - name: "replica2"</span><br><span class="line">        nodes: ["ip12:8123", "ip22:8123"]</span><br><span class="line">    heartbeat_interval: 1m</span><br><span class="line">    users:</span><br><span class="line">      - name: "user"</span><br><span class="line">        password: "password"</span><br><span class="line">        max_concurrent_queries: 10</span><br><span class="line">        max_execution_time: 3m</span><br><span class="line">        max_queue_size: 120</span><br><span class="line">        max_queue_time: 120s</span><br><span class="line"></span><br><span class="line">caches:</span><br><span class="line">  - name: "shortterm"</span><br><span class="line">    dir: "~/chproxy/cache/dir"</span><br><span class="line">    max_size: 150Mb</span><br><span class="line">    expire: 14400s</span><br><span class="line"></span><br><span class="line">param_groups:</span><br><span class="line">    # Group name, which may be passed into `params` option on the `user` level.</span><br><span class="line">  - name: "cron-job"</span><br><span class="line">    # List of key-value params to send</span><br><span class="line">    params:</span><br><span class="line">      - key: "max_memory_usage"</span><br><span class="line">        value: "9000000000"</span><br><span class="line"></span><br><span class="line">      - key: "max_bytes_before_external_group_by"</span><br><span class="line">        value: "4500000000"</span><br><span class="line"></span><br><span class="line">  - name: "web"</span><br><span class="line">    params:</span><br><span class="line">      - key: "max_memory_usage"</span><br><span class="line">        value: "5000000000"</span><br><span class="line"></span><br><span class="line">      - key: "max_columns_to_read"</span><br><span class="line">        value: "30"</span><br><span class="line"></span><br><span class="line">      - key: "max_execution_time"</span><br><span class="line">        value: "30"</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2019/05/13/更为灵活的编程式sql：superset中jinja-template的使用/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1850,176 +2031,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2018/12/27/解决pyspark部署模式由client切换成cluster报错的问题/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Alex Wong">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/user_defined/logo.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Alex‘s Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2018/12/27/解决pyspark部署模式由client切换成cluster报错的问题/" itemprop="url">解决pyspark部署模式由client切换成cluster报错的问题</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-12-27T21:56:44+08:00">
-                2018-12-27
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/大数据/" itemprop="url" rel="index">
-                    <span itemprop="name">大数据</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/大数据/BigData/" itemprop="url" rel="index">
-                    <span itemprop="name">BigData</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/大数据/BigData/Spark/" itemprop="url" rel="index">
-                    <span itemprop="name">Spark</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h4 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h4><p>写了一个pyspark的代码，自定义了一些<code>py</code>文件<code>import</code>进来使用，并且通过<code>shell</code>脚本传8个参数，如下：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span>!/usr/bin/env bash</span><br><span class="line">spark-submit \</span><br><span class="line">     --master yarn \</span><br><span class="line">     --deploy-mode cluster \</span><br><span class="line">     --conf spark.shuffle.service.enabled=true \</span><br><span class="line">     --queue xxx \</span><br><span class="line">     --conf spark.dynamicAllocation.enabled=true \</span><br><span class="line">     --conf spark.default.parallelism=1000 \</span><br><span class="line">     --conf spark.sql.shuffle.partitions=1000 \</span><br><span class="line">     --conf spark.sql.broadcastTimeout=7200 \</span><br><span class="line">     --executor-memory 18g \</span><br><span class="line">     --executor-cores 3 \</span><br><span class="line">     --conf spark.blacklist.enabled=true dependencies/test.py $1 $2 $3 $4 $5 $6 $7 $8</span><br></pre></td></tr></table></figure>
-<p>但是由<code>--deploy-mode client</code>切换成<code>--deploy-mode cluster</code>之后console上却报如下错误：</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2018/12/27/解决pyspark部署模式由client切换成cluster报错的问题/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2074,7 +2085,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">41</span>
+                  <span class="site-state-item-count">42</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -2096,7 +2107,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-count">50</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
