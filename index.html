@@ -262,6 +262,200 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2019/06/15/搭建clickhouse监控/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Alex Wong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/user_defined/logo.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Alex‘s Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/06/15/搭建clickhouse监控/" itemprop="url">搭建clickhouse监控</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-06-15T18:34:37+08:00">
+                2019-06-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/" itemprop="url" rel="index">
+                    <span itemprop="name">olap</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/" itemprop="url" rel="index">
+                    <span itemprop="name">BigData</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/clickhouse/" itemprop="url" rel="index">
+                    <span itemprop="name">clickhouse</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/olap/BigData/clickhouse/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="原由与方案"><a href="#原由与方案" class="headerlink" title="原由与方案"></a>原由与方案</h3><p>为了更好地优化clickhouse的性能，需要对clickhouse集群进行监控。网上很多监控方案都是clickhouse + grafana + prometheus，因此打算使用此方案。</p>
+<p>要想使用prometheus就得先安装exporter，clickhouse有第三方提供的<a href="https://github.com/f1yegor/clickhouse_exporter/blob/master/clickhouse_exporter.go" target="_blank" rel="noopener">clickhouse_exporter</a>，也有容器版本，并且提供了grafana的dashboard版本： <a href="https://grafana.net/dashboards/882。由于我们在集群中使用了代理CHproxy，但CHproxy也同时实现了exporter的功能，并且提供了更多的特性以及grafana" target="_blank" rel="noopener">https://grafana.net/dashboards/882。由于我们在集群中使用了代理CHproxy，但CHproxy也同时实现了exporter的功能，并且提供了更多的特性以及grafana</a> dashboard模板<a href="https://github.com/Vertamedia/chproxy/blob/master/chproxy_overview.json，所以我们也就直接使用。" target="_blank" rel="noopener">https://github.com/Vertamedia/chproxy/blob/master/chproxy_overview.json，所以我们也就直接使用。</a></p>
+<h3 id="安装部署"><a href="#安装部署" class="headerlink" title="安装部署"></a>安装部署</h3><p>我们使用了docker进行部署，并且使用docker-compose进行编排，并且将配置文件和重要数据挂载到宿主机。</p>
+<p>docker-compose如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">version: '3'</span><br><span class="line">services:</span><br><span class="line">  prometheus:</span><br><span class="line">    image: prom/prometheus:latest</span><br><span class="line">    restart: always</span><br><span class="line">    network_mode: host</span><br><span class="line">    user: root</span><br><span class="line">    container_name: prometheus</span><br><span class="line">    ports:</span><br><span class="line">      - "9090:9090"</span><br><span class="line">    depends_on:</span><br><span class="line">      - chproxy</span><br><span class="line">    volumes:</span><br><span class="line">      - ./prometheus.yml:/etc/prometheus/prometheus.yml</span><br><span class="line">      - ./prometheus-data:/prometheus</span><br><span class="line">  grafana:</span><br><span class="line">    image: grafana/grafana:latest</span><br><span class="line">    restart: always</span><br><span class="line">    network_mode: host</span><br><span class="line">    user: root</span><br><span class="line">    container_name: grafana</span><br><span class="line">    ports:</span><br><span class="line">      - "3000:3000"</span><br><span class="line">    depends_on:</span><br><span class="line">      - prometheus</span><br><span class="line">    volumes:</span><br><span class="line">      - ./grafana-data/var/lib/grafana:/var/lib/grafana</span><br><span class="line">      - ./grafana-data/etc/grafana:/etc/grafana</span><br><span class="line"></span><br><span class="line">  chproxy:</span><br><span class="line">    image: tacyuuhon/clickhouse-chproxy:1.13.2</span><br><span class="line">    restart: always</span><br><span class="line">    network_mode: host</span><br><span class="line">    container_name: chproxy</span><br><span class="line">    ports:</span><br><span class="line">      - 9092:9092</span><br><span class="line">    volumes:</span><br><span class="line">      - ./config.yml:/opt/config.yml</span><br></pre></td></tr></table></figure>
+<p>CHproxy的配置文件<code>config.xml</code>，省略，参考上篇文章。</p>
+<p>prometheus的配置文件<code>prometheus.xml</code>如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> my global config</span><br><span class="line">global:</span><br><span class="line">  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.</span><br><span class="line">  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.</span><br><span class="line"><span class="meta">  #</span> scrape_timeout is set to the global default (10s).</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> Alertmanager configuration</span><br><span class="line">alerting:</span><br><span class="line">  alertmanagers:</span><br><span class="line">  - static_configs:</span><br><span class="line">    - targets:</span><br><span class="line">      # - alertmanager:9093</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> Load rules once and periodically evaluate them according to the global 'evaluation_interval'.</span><br><span class="line">rule_files:</span><br><span class="line"><span class="meta">  #</span> - "first_rules.yml"</span><br><span class="line"><span class="meta">  #</span> - "second_rules.yml"</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> A scrape configuration containing exactly one endpoint to scrape:</span><br><span class="line"><span class="meta">#</span> Here it's Prometheus itself.</span><br><span class="line">scrape_configs:</span><br><span class="line"><span class="meta">  #</span> The job name is added as a label `job=&lt;job_name&gt;` to any timeseries scraped from this config.</span><br><span class="line">  - job_name: 'prometheus'</span><br><span class="line"></span><br><span class="line">    # metrics_path defaults to '/metrics'</span><br><span class="line">    # scheme defaults to 'http'.</span><br><span class="line"></span><br><span class="line">    static_configs:</span><br><span class="line">    - targets: ['localhost:9090']</span><br><span class="line"></span><br><span class="line">  - job_name: 'clickhouse-chproxy'</span><br><span class="line"></span><br><span class="line">    # 覆盖全局的 scrape_interval</span><br><span class="line">    scrape_interval: 10s</span><br><span class="line"></span><br><span class="line">    static_configs:</span><br><span class="line">    - targets: ['localhost:9092']</span><br></pre></td></tr></table></figure>
+<p>可通过<code>http://ip:9090/targets</code>查看prometheus配置文件中配置的job是否成功。</p>
+<p><strong>请注意：</strong></p>
+<ol>
+<li>因为docker-compose中使用的网络模式为<code>host</code>，所以在prometheus的配置文件中ip地址都写为<code>localhost</code>，并且要填上对应容器的端口。</li>
+<li>grafana容器可将<code>/var/lib/grafana</code>和<code>/etc/grafana</code>目录拷贝出来放到宿主机上并且重新挂载到容器中这样的话删除并且重启容器时不会导致数据丢失。docker-compose中grafana和prometheus容器可能需要将<code>user</code>设为<code>root</code>，这样的话当宿主机的用户为<code>root</code>时就有权限写mount的目录。</li>
+<li>当通过docker-compose编排好之后，通过’<a href="http://ip:3000&#39;登录grafana，并且配置好prometheus数据源，再将dashboard模板https://github.com/Vertamedia/chproxy/blob/master/chproxy_overview.json导入之后发现没有数据，连左上角的job下拉框都没有任何数据。然后我通过当前dashboard的`Variables`发现下拉框job的内容是通过prometheus中`go_info`来获取的，但是我通过promql查询`go_info`中没有`prometheus.yml`中配置的`-job_name`为`clickhouse-chproxy`的内容。但是我发现`go_goroutines`中有，于是我将`go_info`替换成了`go_goroutines`。" target="_blank" rel="noopener">http://ip:3000&#39;登录grafana，并且配置好prometheus数据源，再将dashboard模板https://github.com/Vertamedia/chproxy/blob/master/chproxy_overview.json导入之后发现没有数据，连左上角的job下拉框都没有任何数据。然后我通过当前dashboard的`Variables`发现下拉框job的内容是通过prometheus中`go_info`来获取的，但是我通过promql查询`go_info`中没有`prometheus.yml`中配置的`-job_name`为`clickhouse-chproxy`的内容。但是我发现`go_goroutines`中有，于是我将`go_info`替换成了`go_goroutines`。</a></li>
+<li>经过测试返现只有CHproxy至少经过一次的使用查询之后<code>go_goroutines</code>中才有<code>-job_name</code>为<code>clickhouse-chproxy</code>的内容，其他metrics也是才会出现。</li>
+</ol>
+<p>go_goroutines</p>
+<p>go_info没有别的信息，需要使用接口发送一次查询</p>
+<p>grafana mount 需要 root user 当前host 为root</p>
+<h3 id="题外话"><a href="#题外话" class="headerlink" title="题外话"></a>题外话</h3><p>我直接在grafana容器中安装了clickhouse DataSource插件，并且制作成了镜像，这样的话grafana也可以直接查询clickhouse了哦，参考：<a href="https://github.com/Vertamedia/clickhouse-grafana，https://grafana.com/plugins/vertamedia-clickhouse-datasource/installation。" target="_blank" rel="noopener">https://github.com/Vertamedia/clickhouse-grafana，https://grafana.com/plugins/vertamedia-clickhouse-datasource/installation。</a></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2019/06/14/解决clickhouse并发问题之CHproxy安装配置/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1872,165 +2066,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2019/02/21/外置application-properties和logback-xml配置文件/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Alex Wong">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/user_defined/logo.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Alex‘s Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/02/21/外置application-properties和logback-xml配置文件/" itemprop="url">外置application.properties和logback.xml配置文件</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-21T14:53:47+08:00">
-                2019-02-21
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/spring-boot/" itemprop="url" rel="index">
-                    <span itemprop="name">spring boot</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/spring-boot/java/" itemprop="url" rel="index">
-                    <span itemprop="name">java</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h4 id="自定义打包输出"><a href="#自定义打包输出" class="headerlink" title="自定义打包输出"></a>自定义打包输出</h4><p>使用<code>maven-assembly-plugin</code>自定义打包输出，其在pom文件中的配置如下：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">&lt;plugin&gt;</span><br><span class="line">    &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;maven-assembly-plugin&lt;/artifactId&gt;</span><br><span class="line">    &lt;configuration&gt;</span><br><span class="line">        &lt;finalName&gt;4a-insight-clickhouse&lt;/finalName&gt;</span><br><span class="line">        &lt;descriptors&gt;</span><br><span class="line">            &lt;descriptor&gt;src/main/assembly/package.xml&lt;/descriptor&gt;</span><br><span class="line">        &lt;/descriptors&gt;</span><br><span class="line">    &lt;/configuration&gt;</span><br><span class="line">    &lt;executions&gt;</span><br><span class="line">        &lt;execution&gt;</span><br><span class="line">            &lt;!-- 绑定到package生命周期阶段上 --&gt;</span><br><span class="line">            &lt;phase&gt;package&lt;/phase&gt;</span><br><span class="line">            &lt;goals&gt;</span><br><span class="line">                &lt;!-- 只运行一次 --&gt;</span><br><span class="line">                &lt;goal&gt;single&lt;/goal&gt;</span><br><span class="line">            &lt;/goals&gt;</span><br><span class="line">        &lt;/execution&gt;</span><br><span class="line">    &lt;/executions&gt;</span><br><span class="line">    &lt;resources&gt;</span><br><span class="line">    &lt;resource&gt;</span><br><span class="line">        &lt;directory&gt;src/main/resources&lt;/directory&gt;</span><br><span class="line">        &lt;excludes&gt;</span><br><span class="line">            &lt;exclude&gt;logback-spring.xml&lt;/exclude&gt;</span><br><span class="line">        &lt;/excludes&gt;</span><br><span class="line">    &lt;/resource&gt;</span><br><span class="line">&lt;/resources&gt;</span><br><span class="line">&lt;/plugin&gt;</span><br></pre></td></tr></table></figure>
-<p><code>&lt;descriptors&gt;</code>描述自定义文件的位置，<code>&lt;phase&gt;</code>maven打包的哪个生命周期生效。由于有了外置的<code>logback-spring.xml</code>文件，所以要排除掉jar包内的<code>logback-spring.xml</code>文件，要不然会出现错误。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2019/02/21/外置application-properties和logback-xml配置文件/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2085,7 +2120,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">42</span>
+                  <span class="site-state-item-count">43</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -2107,7 +2142,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-count">51</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>

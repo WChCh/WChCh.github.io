@@ -262,6 +262,176 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2018/04/26/解决JavaMail邮件出现base64乱码的问题/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Alex Wong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/user_defined/logo.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Alex‘s Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/04/26/解决JavaMail邮件出现base64乱码的问题/" itemprop="url">解决JavaMail邮件出现base64乱码的问题</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-26T17:25:36+08:00">
+                2018-04-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/技术/" itemprop="url" rel="index">
+                    <span itemprop="name">技术</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/技术/学习/" itemprop="url" rel="index">
+                    <span itemprop="name">学习</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/技术/学习/Java/" itemprop="url" rel="index">
+                    <span itemprop="name">Java</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>本机进行邮件发送没出现问题，但是放到某些linux环境中则出现邮件内容是现实base编码的问题：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">------=_Part_3_2039075268.1524573999534</span><br><span class="line">Content-Type: text/html; charset=utf-8</span><br><span class="line">Content-Transfer-Encoding: base64</span><br><span class="line"> </span><br><span class="line">PHA+5ZGK6K2m5L+h5oGv5aaC5LiL77yaPGJyPumhueebriAmbmJzcDsgJm5ic3A7ICZuYnNwOyAm</span><br><span class="line">bmJzcDsgJm5ic3A7ICZuYnNwOyAmbmJzcDvkv6Hmga88YnI+5ZGK6K2m5a6e5L2TIO+8mndpbmRv</span><br><span class="line">d3Nf57qz566h5rWL6K+VPGJyPuWRiuitpuWQjeensCDvvJromZrmi5/mnLrnm67lvZXkuI3kuIDo</span><br><span class="line">h7Q8YnI+5ZGK6K2mSUQgJm5ic3A7ICZuYnNwOyDvvJpjbS1hbGFybS0xMDxicj7lkYrorabmj4/o</span><br><span class="line">v7Ag77ya6Jma5ouf5py6ICB3aW5kb3dzX+e6s+euoea1i+ivleW3sue7j+iiq+enu+iHs+aWh+S7</span><br><span class="line">tuWkuSB2bSE8YnI+5ZGK6K2m57qn5YirIO+8muS4pemHjeWRiuitpjxicj7lkYrorabml7bpl7Qg</span><br><span class="line">77yaMjAxOC0wNC0yNCAyMDo0NToyOTxicj48YnI+5aaC5pyJ55aR6Zeu77yM6K+35LiO57O757uf</span><br><span class="line">566h55CG5ZGY6IGU57O744CCPC9wPg==</span><br><span class="line">------=_Part_3_2039075268.1524573999534--</span><br></pre></td></tr></table></figure>
+<p>一开始以为是编码没设置好，但是本地测试或是在某些linux环境中测试都没问题。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2018/04/26/解决JavaMail邮件出现base64乱码的问题/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2017/12/28/CAS-Compare-and-Swap-原理学习/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -2030,189 +2200,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2017/11/04/第12章-Java内存模型与线程/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Alex Wong">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/user_defined/logo.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Alex‘s Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/11/04/第12章-Java内存模型与线程/" itemprop="url">第12章 Java内存模型与线程</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-11-04T16:59:56+08:00">
-                2017-11-04
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/技术/" itemprop="url" rel="index">
-                    <span itemprop="name">技术</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/技术/学习/" itemprop="url" rel="index">
-                    <span itemprop="name">学习</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/技术/学习/JVM/" itemprop="url" rel="index">
-                    <span itemprop="name">JVM</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>“内存模型”可以理解为在特定的操作协议下对特定的内存或高速缓存进行读写访问的过程抽象。</p>
-<h4 id="Java内存模型"><a href="#Java内存模型" class="headerlink" title="Java内存模型"></a>Java内存模型</h4><h5 id="1-主内存与工作内存"><a href="#1-主内存与工作内存" class="headerlink" title="1 主内存与工作内存"></a>1 主内存与工作内存</h5><p>Java内存模型的主要目标是定义程序中各个变量的访问规则，即在虚拟机中将变量存储到内存和从内存中取出变量这样的底层细节。此处的变量与Java编程中所说的变量有所区别，它包括了实例字段、静态字段和构成数组对象的元素，但不包括局部变量与方法参数，因为后者是线程私有的，不会被共享，自然就不会存在竞争问题。</p>
-<p>工作过程：所有的变量都存储在主内存中。每条线程还有自己的工作内存（属于线程私有，类似处理器的高速缓存），线程的工作内存中保存了被该线程使用到的变量的主内存副本拷贝，线程对变量的所有操作都必须在工作内存中进行，而不能直接读写主内存中的变量，线程间变量值的传递均需要通过主内存来完成。</p>
-<h5 id="2-内存间交互操作"><a href="#2-内存间交互操作" class="headerlink" title="2 内存间交互操作"></a>2 内存间交互操作</h5><p>Java内存模型中定义了一下8种操作来完成主内存和工作内存间的交互操作，虚拟机实现时必须保证下面提及的每一种操作都是原子的、不可再分的。</p>
-<ol>
-<li>lock</li>
-<li>unlock</li>
-<li>read</li>
-<li>load</li>
-<li>use</li>
-<li>assign</li>
-<li>store</li>
-<li>write</li>
-</ol>
-<h5 id="3-对于volatile型变量的特殊规则"><a href="#3-对于volatile型变量的特殊规则" class="headerlink" title="3 对于volatile型变量的特殊规则"></a>3 对于volatile型变量的特殊规则</h5><p>在各个线程的工作内存中，volatile变量也可以存在不一致的情况，但是由于每次使用前都要先<strong>刷新</strong>，执行引擎看不到不一致的情况。</p>
-<p>Java里面的运算并非原子操作，导致volatile变量的运算在并发下一样是不安全的。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2017/11/04/第12章-Java内存模型与线程/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2267,7 +2254,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">42</span>
+                  <span class="site-state-item-count">43</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -2289,7 +2276,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-count">51</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
