@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="Alex‘s Blog">
 <meta property="og:description" content="Dockerfile： 1234567FROM clickhouse-client:latestENV HOST=&quot;localhost&quot;ENV USER=&quot;default&quot;ENV PASSWORD=&quot;&quot;ENV DATABASE=&quot;default&quot;ENTRYPOINT /usr/bin/clickhouse-client -h $HOST -u $USER --password $PASSWORD">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-10-28T02:41:51.449Z">
+<meta property="og:updated_time" content="2019-10-28T02:47:27.420Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="制作可传参的docker clickhouse-client">
 <meta name="twitter:description" content="Dockerfile： 1234567FROM clickhouse-client:latestENV HOST=&quot;localhost&quot;ENV USER=&quot;default&quot;ENV PASSWORD=&quot;&quot;ENV DATABASE=&quot;default&quot;ENTRYPOINT /usr/bin/clickhouse-client -h $HOST -u $USER --password $PASSWORD">
@@ -388,7 +388,7 @@
         <p>Dockerfile：</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">FROM clickhouse-client:latest</span><br><span class="line"></span><br><span class="line">ENV HOST="localhost"</span><br><span class="line">ENV USER="default"</span><br><span class="line">ENV PASSWORD=""</span><br><span class="line">ENV DATABASE="default"</span><br><span class="line">ENTRYPOINT /usr/bin/clickhouse-client -h $HOST -u $USER --password $PASSWORD -d $DATABASE</span><br></pre></td></tr></table></figure>
 <p>运行命令：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run -it --rm --name clickhouse-client -e HOST="10.185.xx.xx" -e USER="user" -e PASSWORD="xxxx" -e DATABASE="db"  mirror.jd.com/9n/clickhouse-client:param</span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run -it --rm --name clickhouse-client -e HOST="10.185.xx.xx" -e USER="user" -e PASSWORD="xxxx" -e DATABASE="db"  clickhouse-client:param</span><br></pre></td></tr></table></figure>
 <p>遇到问题：</p>
 <p>当ENTRYPOINT使用方括号并且里面的参数是明文而不是环境变量时，是可以运行的，如</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ENTRYPOINT [&quot;/usr/bin/clickhouse-client&quot;,&quot;-h&quot;,&quot;10.185.xx.xx&quot;,&quot;-u&quot;,&quot;user&quot;,&quot;--password&quot;,&quot;xxx&quot;]</span><br></pre></td></tr></table></figure>
