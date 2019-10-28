@@ -8,7 +8,7 @@ categories: [olap,BigData,clickhouse,大数据]
 Dockerfile：
 
 ```shell
-FROM mirror.jd.com/9n/clickhouse-client:latest
+FROM clickhouse-client:latest
 
 ENV HOST="localhost"
 ENV USER="default"
