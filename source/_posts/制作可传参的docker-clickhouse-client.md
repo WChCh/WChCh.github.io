@@ -20,7 +20,7 @@ ENTRYPOINT /usr/bin/clickhouse-client -h $HOST -u $USER --password $PASSWORD -d 
 运行命令：
 
 ```shell
-docker run -it --rm --name clickhouse-client -e HOST="10.185.xx.xx" -e USER="user" -e PASSWORD="xxxx" -e DATABASE="db"  mirror.jd.com/9n/clickhouse-client:param
+docker run -it --rm --name clickhouse-client -e HOST="10.185.xx.xx" -e USER="user" -e PASSWORD="xxxx" -e DATABASE="db"  clickhouse-client:param
 ```
 
 遇到问题：
