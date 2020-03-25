@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="Alex‘s Blog">
 <meta property="og:description" content="说明本文主要介绍euler利用docker再单机上模拟分布式训练，分布式模型评估，分布式embedding的简单上手体验过程，一些基础的工作我已经准备好了。如果只是单机的训练等，直接参考官方文档就好了，可以在本地的环境或是利用现有的docker环境都可以。 本教程主要用docker-compose在单台物理机上来模拟多主机环境，后面如需要跑在k8s环境中可参考其中内容进行改造即可。 安装源码下载">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-03-25T02:14:56.164Z">
+<meta property="og:updated_time" content="2020-03-25T02:18:53.765Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="euler简单上手">
 <meta name="twitter:description" content="说明本文主要介绍euler利用docker再单机上模拟分布式训练，分布式模型评估，分布式embedding的简单上手体验过程，一些基础的工作我已经准备好了。如果只是单机的训练等，直接参考官方文档就好了，可以在本地的环境或是利用现有的docker环境都可以。 本教程主要用docker-compose在单台物理机上来模拟多主机环境，后面如需要跑在k8s环境中可参考其中内容进行改造即可。 安装源码下载">
@@ -384,6 +384,7 @@
 </li>
 </ol>
 <p><strong>在当前进度下，安装时建议使用master分支</strong></p>
+<a id="more"></a>
 <h3 id="docker-安装"><a href="#docker-安装" class="headerlink" title="docker 安装"></a>docker 安装</h3><ol>
 <li><p>使用Dockerfile安装：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cd euler</span><br><span class="line">docker build --net=host -f tools/docker/Dockerfile .</span><br><span class="line">对于新版本的docker build需要改成：</span><br><span class="line">docker build --network=host -f tools/docker/Dockerfile .</span><br></pre></td></tr></table></figure>
