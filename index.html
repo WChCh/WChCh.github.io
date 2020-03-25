@@ -262,6 +262,252 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2020/03/25/euler简单上手/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Alex Wong">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/user_defined/logo.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Alex‘s Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/03/25/euler简单上手/" itemprop="url">euler简单上手</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-03-25T10:13:22+08:00">
+                2020-03-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/TensorFlow/" itemprop="url" rel="index">
+                    <span itemprop="name">TensorFlow</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/TensorFlow/深度学习/" itemprop="url" rel="index">
+                    <span itemprop="name">深度学习</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h2><p>本文主要介绍euler利用docker再单机上模拟分布式训练，分布式模型评估，分布式embedding的简单上手体验过程，一些基础的工作我已经准备好了。如果只是单机的训练等，直接参考官方文档就好了，可以在本地的环境或是利用现有的docker环境都可以。</p>
+<p>本教程主要用<code>docker-compose在</code>单台物理机上来模拟多主机环境，后面如需要跑在k8s环境中可参考其中内容进行改造即可。</p>
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><h3 id="源码下载"><a href="#源码下载" class="headerlink" title="源码下载"></a>源码下载</h3><ol>
+<li><p>git clone –recursive <a href="https://github.com/alibaba/euler.git`" target="_blank" rel="noopener">https://github.com/alibaba/euler.git`</a></p>
+</li>
+<li><p>如果过程中<code>clone</code>失败，那么进入主目录使用<code>submodule update --init --recursive --progress</code>检出各个子模块</p>
+</li>
+<li><p>对于目录<code>D:\shadowsocks\euler\third_party</code>要检出第三方依赖的问题，</p>
+<ol>
+<li><p>如果报的是<code>zookeeper</code>的<code>Unable to find current revision in submodule path</code>问题，那么可以在当前目录中直接将zookeeper的代码<code>clone</code>下来，然后再切换到源码中指定的<code>commit</code>版本：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/apache/zookeeper.git`</span><br><span class="line">cd zookeeper</span><br><span class="line">git checkout 05b774a1b05374618300f657c9c91b0d5c6ddf71</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如何因为网络原因无法<code>clone</code>，则可以先再网上找到相应的包，然后再修改<code>commit</code>版本：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">1. 使用此链接下载Fuzzer并解压：https://github-production-repository-file-5c1aeb.s3.amazonaws.com/165004157/2991980?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20200228%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20200228T111759Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=0e9db781ee0e38e1b1c02cfbdeff669484631d9aa2c5bbfa64c9c243b6bab2f6&amp;X-Amz-SignedHeaders=host&amp;actor_id=8743639&amp;response-content-disposition=attachment%3Bfilename%3DFuzzer.zip&amp;response-content-type=application%2Fzip</span><br><span class="line">2. 将Fuzzer文件夹名称改成libFuzzer，并且进入此文件夹。</span><br><span class="line">3. 修改commit版本：git checkout 1b543d6e5073b56be214394890c9193979a3d7e1</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果别的依赖子模块出现问题可参考以上两种方法。</p>
+</li>
+</ol>
+</li>
+</ol>
+<p><strong>在当前进度下，安装时建议使用master分支</strong></p>
+<h3 id="docker-安装"><a href="#docker-安装" class="headerlink" title="docker 安装"></a>docker 安装</h3><ol>
+<li><p>使用Dockerfile安装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cd euler</span><br><span class="line">docker build --net=host -f tools/docker/Dockerfile .</span><br><span class="line">对于新版本的docker build需要改成：</span><br><span class="line">docker build --network=host -f tools/docker/Dockerfile .</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果报有错误<code>-- tensorflow_framework library found: in TF_FRAMEWORK-NOTFOUND</code>可在Dockerfile中<code>COPY . /tmp/Euler</code>语句后添加：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">RUN cd /usr/local/lib/python2.7/dist-packages/tensorflow/ &amp;&amp; \</span><br><span class="line">    ln -s libtensorflow_framework.so.1 libtensorflow_framework.so</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>在docker中使用时，默认安装的TensorFlow是最新版本，但跑ppi的demo是会报<code>segmentation fault (core dumped)</code>的问题，所以要在Dockerfile中安装指定TensorFlow版本解决此问题：</p>
+<p><code>pip --no-cache-dir install tensorflow==1.12</code></p>
+</li>
+</ol>
+<p><strong>注意：在我的所有docker环境中安装的TensorFlow版本都是1.12，大家可以根据需要更改。</strong></p>
+<h2 id="集群搭建"><a href="#集群搭建" class="headerlink" title="集群搭建"></a>集群搭建</h2><p>制作好docker镜像之后，使用docker-compose来进行容器的编排。在整个集群环境中，需要hadoop的hdfs来进行数据的分布式分发和存储，需要zookeeper来进行euler图引擎各节点的协调工作。</p>
+<h3 id="集群的编排"><a href="#集群的编排" class="headerlink" title="集群的编排"></a>集群的编排</h3><p>下面是一个启动两个ps，4个worker训练集群的docker-compose文件。</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">'3'</span></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line"><span class="attr">  zookeeper:</span></span><br><span class="line"><span class="attr">    image:</span> <span class="string">mirror.jd.com/9n/zookeeper:3.4.14</span></span><br><span class="line"><span class="attr">    restart:</span> <span class="string">always</span></span><br><span class="line"><span class="attr">    user:</span> <span class="string">root</span></span><br><span class="line"><span class="attr">    container_name:</span> <span class="string">zookeeper</span></span><br><span class="line"></span><br><span class="line"><span class="attr">  hdfs:</span></span><br><span class="line"><span class="attr">    image:</span> <span class="string">mirror.jd.com/9n/hadoop:2.7.0</span></span><br><span class="line"><span class="attr">    restart:</span> <span class="string">always</span></span><br><span class="line"><span class="attr">    user:</span> <span class="string">root</span></span><br><span class="line"><span class="attr">    container_name:</span> <span class="string">hdfs</span></span><br><span class="line"></span><br><span class="line"><span class="attr">  ps1:</span></span><br><span class="line"><span class="attr">    image:</span> <span class="string">mirror.jd.com/9n/euler:latest_ping</span></span><br><span class="line"><span class="attr">    restart:</span> <span class="string">always</span></span><br><span class="line"><span class="attr">    user:</span> <span class="string">root</span></span><br><span class="line"><span class="attr">    container_name:</span> <span class="string">ps1</span></span><br><span class="line"><span class="attr">    tty:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">    depends_on:</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">zookeeper</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">hdfs</span></span><br><span class="line"><span class="attr">  ps2:</span></span><br><span class="line"><span class="attr">    image:</span> <span class="string">mirror.jd.com/9n/euler:latest_ping</span></span><br><span class="line"><span class="attr">    restart:</span> <span class="string">always</span></span><br><span class="line"><span class="attr">    user:</span> <span class="string">root</span></span><br><span class="line"><span class="attr">    container_name:</span> <span class="string">ps2</span></span><br><span class="line"><span class="attr">    tty:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">    depends_on:</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">zookeeper</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">hdfs</span></span><br><span class="line"></span><br><span class="line"><span class="attr">  worker1:</span></span><br><span class="line"><span class="attr">    image:</span> <span class="string">mirror.jd.com/9n/euler:latest_ping</span></span><br><span class="line"><span class="attr">    restart:</span> <span class="string">always</span></span><br><span class="line"><span class="attr">    user:</span> <span class="string">root</span></span><br><span class="line"><span class="attr">    container_name:</span> <span class="string">worker1</span></span><br><span class="line"><span class="attr">    tty:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">    depends_on:</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">zookeeper</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">hdfs</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">ps1</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">ps2</span></span><br><span class="line"><span class="attr">  worker2:</span></span><br><span class="line"><span class="attr">    image:</span> <span class="string">mirror.jd.com/9n/euler:latest_ping</span></span><br><span class="line"><span class="attr">    restart:</span> <span class="string">always</span></span><br><span class="line"><span class="attr">    user:</span> <span class="string">root</span></span><br><span class="line"><span class="attr">    container_name:</span> <span class="string">worker2</span></span><br><span class="line"><span class="attr">    tty:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">    depends_on:</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">zookeeper</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">hdfs</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">ps1</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">ps2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">  worker3:</span></span><br><span class="line"><span class="attr">    image:</span> <span class="string">mirror.jd.com/9n/euler:latest_ping</span></span><br><span class="line"><span class="attr">    restart:</span> <span class="string">always</span></span><br><span class="line"><span class="attr">    user:</span> <span class="string">root</span></span><br><span class="line"><span class="attr">    container_name:</span> <span class="string">worker3</span></span><br><span class="line"><span class="attr">    tty:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">    depends_on:</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">zookeeper</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">hdfs</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">ps1</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">ps2</span></span><br><span class="line"></span><br><span class="line"><span class="attr">  worker4:</span></span><br><span class="line"><span class="attr">    image:</span> <span class="string">mirror.jd.com/9n/euler:latest_ping</span></span><br><span class="line"><span class="attr">    restart:</span> <span class="string">always</span></span><br><span class="line"><span class="attr">    user:</span> <span class="string">root</span></span><br><span class="line"><span class="attr">    container_name:</span> <span class="string">worker4</span></span><br><span class="line"><span class="attr">    tty:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">    depends_on:</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">zookeeper</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">hdfs</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">ps1</span></span><br><span class="line"><span class="bullet">      -</span> <span class="string">ps2</span></span><br></pre></td></tr></table></figure>
+<p>现有的镜像说明：</p>
+<ol>
+<li>镜像<code>mirror.jd.com/9n/euler:latest_ping</code>安装了ping命令，便于调试。</li>
+<li>镜像<code>mirror.jd.com/9n/euler:latest_network_host</code>在Dockerfile 的build是使用了<code>--network=host</code>方式，是得容器与主机共享一个网段。</li>
+<li>镜像<code>mirror.jd.com/9n/euler:latest</code>，比较纯净的镜像，不加<code>--network=host</code>方式，不加别的命令工具。</li>
+<li>镜像<code>mirror.jd.com/9n/euler_tmp:latest</code>，不加<code>--network=host</code>方式，加了<code>vim</code>和网络相关的命令工具，并且保留了编译后的源码，源码位置为<code>/tmp/Euler</code>。如果想进行源码调试，比如修改某些python代码，使用命令<code>docker exec -it containerid /bin/bash</code>后，那么必须先<code>source /etc/profile</code>让其中的<code>export PYTHONPATH=PYTHONPATH:/tmp/Euler</code>环境生效，否则生效的会是安装到全局目录下的Euler，此处可参考<a href="https://github.com/alibaba/euler/wiki/%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85" target="_blank" rel="noopener">安装编译中的安装步骤</a>。</li>
+</ol>
+<p>大家可以根据需要定制镜像，定义集群。</p>
+<p>定义好<code>docker-compose</code>文件之后，使用命令<code>docker-compose up -d</code>启动集群。通过<code>docker-compose stop</code>或是<code>docker-compose down</code>停止或是撤销docker集群。</p>
+<h2 id="数据准备"><a href="#数据准备" class="headerlink" title="数据准备"></a>数据准备</h2><p>训练集群准备好之后，下一步就是要准备训练数据和测试数据。</p>
+<p>本教程参考使用ppi4的数据进行分布式训练，对于训练数据，其中涉及到：一，数据如何获取；二，如何将原始数据转换成图的数据格式；三，再将这种符合图数据格式规范的数据转换成二进制图数据；四，最后进行数据分片。当然可以先进行分片再进行二进制转换也都可以，怎么方便怎么来。分布式训练必须是要按照一定规范将数据进行分片的，具体如何分，参考官方教程：<a href="https://github.com/alibaba/euler/wiki/%E6%95%B0%E6%8D%AE%E5%87%86%E5%A4%87" target="_blank" rel="noopener">数据准备</a>。由于使用的ppi4的数据已经是符合图数据格式规范的明文数据，所以无需上述的第二步，要做的只是将数据进行分片并且转换成二进制。</p>
+<p>对于测试数据<code>ppi_test.id</code>无需进行分片。</p>
+<h3 id="数据获取"><a href="#数据获取" class="headerlink" title="数据获取"></a>数据获取</h3><p>参考<a href="https://github.com/alibaba/euler/wiki/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B#1-%E6%95%B0%E6%8D%AE%E5%87%86%E5%A4%87" target="_blank" rel="noopener">数据获取</a>。可使用本地或是现有的docker环境进行获取，使用现有的docker环境的话就不需要安装euler，并且可以使用euler自带的一些工具类进行数据处理，前提是docker容器能够与外界通信。</p>
+<h3 id="数据分片与转换"><a href="#数据分片与转换" class="headerlink" title="数据分片与转换"></a>数据分片与转换</h3><p>上一步骤获取的数据是位于单个文件中的，只适用于单机的训练环境，如果要想在分布式环境中使用必须按照规范对训练数据进行分片，规范参考<a href="https://github.com/alibaba/euler/wiki/%E6%95%B0%E6%8D%AE%E5%87%86%E5%A4%87#%E6%95%B0%E6%8D%AE%E5%88%86%E7%89%87" target="_blank" rel="noopener">数据分片</a>。</p>
+<p>对于小规模数据，可使用awk命令进行内容的切分，对于大的数据量可以使用spark进行切分，对于小或是大的数据量的数据二进制转换，可使用已经安装好的euler环境的<a href="https://github.com/alibaba/euler/wiki/%E6%95%B0%E6%8D%AE%E5%87%86%E5%A4%87#%E5%9B%BE%E6%95%B0%E6%8D%AE%E8%BD%AC%E6%8D%A2%E5%B7%A5%E5%85%B7" target="_blank" rel="noopener">工具进行转换</a>。</p>
+<h3 id="数据上传"><a href="#数据上传" class="headerlink" title="数据上传"></a>数据上传</h3><p>对于分布式训练和验证的数据都必须放在hdfs中。</p>
+<p>在ppi4的demo中，数据是放在本地，下面是提供的数据上传脚本。</p>
+<p><code>prepare_data.sh</code>:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span>!/usr/bin/env bash</span><br><span class="line"></span><br><span class="line">docker exec hdfs /usr/local/hadoop/bin/hdfs dfsadmin -safemode wait</span><br><span class="line">sleep 5s</span><br><span class="line">echo "copy the ppi4 data to docker..."</span><br><span class="line">docker cp ppi4 hdfs:/home</span><br><span class="line">echo "create folders in  hdfs..."</span><br><span class="line">docker exec -it hdfs  /bin/bash -c 'source /etc/profile &amp;&amp; hadoop fs -mkdir ppi4'</span><br><span class="line">docker exec -it hdfs  /bin/bash -c 'source /etc/profile &amp;&amp; hadoop fs -mkdir ppi4_test'</span><br><span class="line">echo "put splited files used for training to the hdfs...."</span><br><span class="line">docker exec -it hdfs  /bin/bash -c 'source /etc/profile &amp;&amp; hadoop fs -put /home/ppi4/ppi_data_0.dat  ppi4\</span><br><span class="line">                                    &amp;&amp; hadoop fs -put /home/ppi4/ppi_data_1.dat  ppi4\</span><br><span class="line">                                    &amp;&amp; hadoop fs -put /home/ppi4/ppi_data_2.dat  ppi4\</span><br><span class="line">                                    &amp;&amp; hadoop fs -put /home/ppi4/ppi_data_3.dat  ppi4'</span><br><span class="line">echo "put the id flies used for evaluating to the hdfs..."</span><br><span class="line">docker exec -it hdfs  /bin/bash -c 'source /etc/profile &amp;&amp; hadoop fs -put /home/ppi4/ppi.id  ppi4_test'</span><br><span class="line">sleep 3s</span><br></pre></td></tr></table></figure>
+<h2 id="分布式训练"><a href="#分布式训练" class="headerlink" title="分布式训练"></a>分布式训练</h2><p>集群和数据都准备好之后，就需要提交任务进行分布式训练了。首先通过<code>docker exec -it containerid /bin/bash</code>登录各个docker容器。</p>
+<h3 id="启动ps-server"><a href="#启动ps-server" class="headerlink" title="启动ps server"></a>启动ps server</h3><p>由于不管是训练，评估，还是在embedding输出，任务的提交都是再worker节点上，所以我们可以先启动ps节点。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ps1 容器：</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=ps --task_index=0</span><br><span class="line"></span><br><span class="line">ps2 容器：</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=ps --task_index=1</span><br></pre></td></tr></table></figure>
+<h3 id="训练"><a href="#训练" class="headerlink" title="训练"></a>训练</h3><p>然后在各个worker节点上启动训练任务：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">worker1容器：</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=0 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode train</span><br><span class="line"></span><br><span class="line">worker2容器:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=1 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode train</span><br><span class="line"></span><br><span class="line">worker3容器:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=2 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode train</span><br><span class="line"></span><br><span class="line">worker4:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=3 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode train</span><br></pre></td></tr></table></figure>
+<h3 id="模型评估"><a href="#模型评估" class="headerlink" title="模型评估"></a>模型评估</h3><p>模型评估脚本，多了<code>--id_file</code>这个参数。<code>hdfs://hdfs:9000/user/root/ppi4_test/ppi.id</code>这个就是测试文件。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">worker1容器：</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=0 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --id_file hdfs://hdfs:9000/user/root/ppi4_test/ppi.id --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode evaluate</span><br><span class="line"></span><br><span class="line">worker2容器:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=1 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --id_file hdfs://hdfs:9000/user/root/ppi4_test/ppi.id --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode evaluate</span><br><span class="line"></span><br><span class="line">worker3容器:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=2 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --id_file hdfs://hdfs:9000/user/root/ppi4_test/ppi.id --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode evaluate</span><br><span class="line"></span><br><span class="line">worker4:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=3 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --id_file hdfs://hdfs:9000/user/root/ppi4_test/ppi.id --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode evaluate</span><br></pre></td></tr></table></figure>
+<p>观察点：分布式训练中的模型效果要比单机的差。</p>
+<h3 id="embedding输出"><a href="#embedding输出" class="headerlink" title="embedding输出"></a>embedding输出</h3><p>与模型训练的区别就只是最后一个<code>--mode</code>参数。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">worker1容器：</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=0 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode save_embedding</span><br><span class="line"></span><br><span class="line">worker2容器:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=1 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode save_embedding</span><br><span class="line"></span><br><span class="line">worker3容器:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=2 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode save_embedding</span><br><span class="line"></span><br><span class="line">worker4:</span><br><span class="line">python -m tf_euler --ps_hosts=ps1:1998,ps2:1999 --worker_hosts=worker1:2000,worker2:2001,worker3:2002,worker4:2003 --job_name=worker  --task_index=3 --data_dir hdfs://hdfs:9000/user/root/ppi4 --model_dir hdfs://hdfs:9000/user/root/ckpt --euler_zk_addr zookeeper:2181 --euler_zk_path /tf_euler_train --max_id 56944 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --model graphsage_supervised --mode save_embedding</span><br></pre></td></tr></table></figure>
+<h3 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h3><ol>
+<li><code>docker-compose</code>集群中通过容器名称就可以访问目标容器的服务，所以会有类似<code>worker1:2000,worker2:2001</code>这样的表示方法。</li>
+<li>配置和启动任务时，注意各个容器（主机）的对应顺序。比如<code>task_index=3</code>的命令对应的是<code>worker4</code>容器（主机），也只能在<code>worker4</code>上启动此条命令。</li>
+</ol>
+<h2 id="训练流程总结"><a href="#训练流程总结" class="headerlink" title="训练流程总结"></a>训练流程总结</h2><p>当前目录结构如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">.</span><br><span class="line">├── docker-compose.yml</span><br><span class="line">├── evaluate_cmd.txt</span><br><span class="line">├── ppi4</span><br><span class="line">│   ├── ppi_data_0.dat</span><br><span class="line">│   ├── ppi_data_1.dat</span><br><span class="line">│   ├── ppi_data_2.dat</span><br><span class="line">│   ├── ppi_data_3.dat</span><br><span class="line">│   └── ppi.id</span><br><span class="line">├── prepare_data.sh</span><br><span class="line">├── save_embedding_cmd.txt</span><br><span class="line">└── train_cmd.txt</span><br></pre></td></tr></table></figure>
+<p>只要将数据包拷贝到linux目录下。</p>
+<ol>
+<li>通过<code>docker-compose</code> up  -d启动集群。</li>
+<li>通过运行<code>sh prepare_date.sh</code>文件将训练和测试文件上传到指定的hdfs目录下。</li>
+<li>通过<code>docker exec -it containerid /bin/bash</code>登录各个docker容器，在对应的docker容器上先启动ps任务，然后再在对应的docker容器上启动worker任务，分别进行训练，模型评估，embedding输出。</li>
+<li>如果要销毁集群只需要<code>docker-compose down</code>即可。</li>
+</ol>
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><ol>
+<li><p>如果是使用的ubuntu桌面版，那么在安装时在<code>/etc/profile</code>里面配置的<code>export</code>将可能导致系统登录不进去，建议装在docker内。</p>
+</li>
+<li><p>各个<code>ps</code>和<code>worker</code>节点的配置要注意保持对应关系。</p>
+</li>
+<li><p>如果容器中出现<code>tensorflow.python.framework.errors_impl.UnknownError: Could not start gRPC server</code>可先查看之前的跑的任务是以后台运行的方式存在，杀掉之后可重新提交任务。</p>
+</li>
+<li><p>访问hdfs，或是镜像mirror.jd.com/9n/euler_tmp的容器想在<code>tmp/Euler/</code>中修改代码调试时，通过<code>docker exec -it worker1 /bin/bash</code>进入镜像时，首先<code>source /etc/profile</code>。</p>
+</li>
+<li><p>原有的euler分布式训练中存在无法同步退出的问题，我针对退出逻辑做了修改，<code>集群的编排</code>模块中介绍的镜像都是我修改python代码后打的。修改的文件<a href="https://github.com/alibaba/euler/blob/master/tf_euler/python/utils/hooks.py" target="_blank" rel="noopener">euler/tf_euler/python/utils/hooks.py</a>的内容如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">SyncExitHook</span><span class="params">(tf.train.SessionRunHook)</span>:</span></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, num_workers, task_index, is_chief)</span>:</span></span><br><span class="line">    self._task_index = task_index</span><br><span class="line">    self._is_chief = is_chief</span><br><span class="line">    self._num_workers = num_workers</span><br><span class="line">    self._counter_vars = []</span><br><span class="line">    self._counter_add_ops = []</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(self._num_workers):</span><br><span class="line">      counter_var = tf.Variable(<span class="number">0</span>, name=<span class="string">"num_finished_workers-&#123;&#125;"</span>.format(i), collections=[tf.GraphKeys.LOCAL_VARIABLES])</span><br><span class="line">      self._counter_vars.append(counter_var)</span><br><span class="line">      counter_var_ops = tf.assign(counter_var, <span class="number">1</span>, use_locking=<span class="keyword">True</span>)</span><br><span class="line">      self._counter_add_ops.append(counter_var_ops)</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">end</span><span class="params">(self, session)</span>:</span></span><br><span class="line">    session.run(self._counter_add_ops[self._task_index])</span><br><span class="line">    <span class="keyword">while</span> <span class="keyword">True</span>:</span><br><span class="line">      num_finished_workers = <span class="number">0</span></span><br><span class="line">      <span class="keyword">for</span> i <span class="keyword">in</span> range(self._num_workers):</span><br><span class="line">        state = session.run(self._counter_vars[i])</span><br><span class="line">        <span class="keyword">if</span> i == self._task_index <span class="keyword">and</span> state == <span class="number">0</span>:</span><br><span class="line">          session.run(self._counter_add_ops[i])</span><br><span class="line">          state = session.run(self._counter_vars[i])</span><br><span class="line"></span><br><span class="line">        num_finished_workers = num_finished_workers + state</span><br><span class="line"></span><br><span class="line">      tf.logging.info(<span class="string">"%d workers have finished ..."</span>, num_finished_workers)</span><br><span class="line">      <span class="keyword">if</span> num_finished_workers &gt;= self._num_workers:</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">      time.sleep(<span class="number">1</span>)</span><br></pre></td></tr></table></figure>
+<p>然后再<a href="https://github.com/alibaba/euler/blob/master/tf_euler/python/run_loop.py" target="_blank" rel="noopener">euler/tf_euler/python/run_loop.py</a>中调用<code>SynExitHook</code>的地方增加传入的参数即可：<code>SyncExitHook(len(flags_obj.worker_hosts), flags_obj.task_index, is_chief)</code></p>
+<p>仍然存在的问题，如果某个节点过早退出了，那么此节点再zookeeper中的数据也会相应地删除，euler监测到zookeeper中节点数量不满足那么剩下的节点就不会退出，不过出现的概率小，一般出现在<code>evaluate</code>模式中。</p>
+</li>
+</ol>
+<h2 id="后话"><a href="#后话" class="headerlink" title="后话"></a>后话</h2><p>如果想要支持大规模的集群训练和性能提升还需要做很多的优化。官方文档中也给了一些建议，也需要在实战中提升。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2019/11/27/使用Flink-SQL读取kafka数据并通过JDBC方式写入Clickhouse实时场景的简单实例/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1910,193 +2156,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://wchch.github.io/2019/03/25/clickhouse-ReplicatedMergeTree使用/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Alex Wong">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/user_defined/logo.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Alex‘s Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/03/25/clickhouse-ReplicatedMergeTree使用/" itemprop="url">clickhouse ReplicatedMergeTree使用</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-25T18:09:42+08:00">
-                2019-03-25
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/olap/" itemprop="url" rel="index">
-                    <span itemprop="name">olap</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/olap/BigData/" itemprop="url" rel="index">
-                    <span itemprop="name">BigData</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/olap/BigData/clickhouse/" itemprop="url" rel="index">
-                    <span itemprop="name">clickhouse</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/olap/BigData/clickhouse/大数据/" itemprop="url" rel="index">
-                    <span itemprop="name">大数据</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h4 id="Nested数据类型使用"><a href="#Nested数据类型使用" class="headerlink" title="Nested数据类型使用"></a>Nested数据类型使用</h4><p>待写。</p>
-<h4 id="CSV-http方式灌数命令"><a href="#CSV-http方式灌数命令" class="headerlink" title="CSV http方式灌数命令"></a>CSV http方式灌数命令</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat da.csv | curl &apos;http://10.185.217.47:8123/?user=user&amp;password=password&amp;query=INSERT%20INTO%20table%20FORMAT%20CSV&apos;</span><br></pre></td></tr></table></figure>
-<h4 id="库、表操作"><a href="#库、表操作" class="headerlink" title="库、表操作"></a>库、表操作</h4><p>库，表的创建，删除等操作加上<code>on cluster cluster1</code>说明，只在一个节点上操作即可实现集群同步。</p>
-<h4 id="相关问题"><a href="#相关问题" class="headerlink" title="相关问题"></a>相关问题</h4><p>问题删除分区时：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Password required for user default., e.what() = DB::Exception.&quot;</span><br></pre></td></tr></table></figure>
-<p>解决<a href="https://github.com/yandex/ClickHouse/issues/4762" target="_blank" rel="noopener">https://github.com/yandex/ClickHouse/issues/4762</a>：</p>
-<p>原因：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Generally, when you do some DDL on non-leader replica it forwards the request to a leader, and during that forwarding &quot;default&quot; passwordless user was used.</span><br><span class="line">从leader replica删除。</span><br></pre></td></tr></table></figure>
-<p>解决：选择所有的主副本删除即可，zookeeper会自动同步删除子副本的数据。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2019/03/25/clickhouse-ReplicatedMergeTree使用/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2151,7 +2210,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">45</span>
+                  <span class="site-state-item-count">46</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -2162,7 +2221,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">55</span>
+                  <span class="site-state-item-count">57</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -2173,7 +2232,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">53</span>
+                  <span class="site-state-item-count">55</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
@@ -2228,7 +2287,7 @@
 
     <footer id="footer" class="footer">
       <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
